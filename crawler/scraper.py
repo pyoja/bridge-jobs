@@ -95,6 +95,32 @@ def fetch_html(url: str) -> str:
         with urllib.request.urlopen(req, timeout=15) as res:
             return res.read().decode("utf-8")
 
+def fetch_html_euckr(url: str) -> str:
+    """EUC-KR 인코딩 사이트 전용 fetch (알바천국)"""
+    ALBA_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9",
+        "Accept-Encoding": "gzip, deflate",  # br 제외: EUC-KR 페이지는 br 압축 시 충돌
+        "Referer": "https://www.alba.co.kr/",
+        "Connection": "keep-alive",
+    }
+    if requests:
+        resp = requests.get(url, headers=ALBA_HEADERS, timeout=15)
+        resp.raise_for_status()
+        resp.encoding = 'euc-kr'  # 인코딩 강제 지정
+        return resp.text
+    else:
+        import urllib.request
+        req = urllib.request.Request(url, headers=ALBA_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as res:
+            raw = res.read()
+            return raw.decode('euc-kr', errors='replace')
+
 def parse_jobs_from_albamon_html(html: str) -> list:
     match = re.search(
         r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>',
@@ -206,7 +232,7 @@ def crawl_alba_heaven() -> list:
         )
         
         try:
-            html = fetch_html(url)
+            html = fetch_html_euckr(url)  # EUC-KR 전용 fetch 사용
             soup = BeautifulSoup(html, 'html.parser')
             
             normal_info = soup.find(id="NormalInfo")
