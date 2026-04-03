@@ -311,6 +311,91 @@ def crawl_alba_heaven() -> list:
     return all_jobs
 
 # =============================================
+# 크롤러: 잡코리아
+# =============================================
+def crawl_jobkorea() -> list:
+    all_jobs = []
+    page_num = 1
+    
+    print("\n--- [잡코리아] 수집 시작 ---")
+    while True:
+        url = (
+            f"https://www.jobkorea.co.kr/Search/?stext=백엔드개발자,프론트엔드개발자,웹개발자"
+            f"&local=I000&jobtype=2,6&Page_No={page_num}"
+        )
+        
+        try:
+            html = fetch_html(url)
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            cards = soup.find_all(lambda tag: tag.name == 'div' and tag.get('data-sentry-component') == 'CardJob')
+            
+            if not cards or len(cards) == 0:
+                print(f"📄 [잡코리아] {page_num}페이지 - 더 이상 공고가 없습니다. (수집 종료)")
+                break
+                
+            page_jobs = []
+            
+            for card in cards:
+                company_el = card.find("span", class_=re.compile(r"text-typo-b2-16"))
+                company = company_el.text.strip() if company_el else "회사명 비공개"
+                
+                title_el = card.find("span", class_=re.compile(r"text-typo-b1-18"))
+                title = title_el.text.strip() if title_el else ""
+                if not title: continue
+                
+                link_el = card.find("a", href=re.compile(r"GI_Read"))
+                job_url = link_el["href"] if link_el else ""
+                if job_url.startswith("/"): job_url = "https://www.jobkorea.co.kr" + job_url
+                elif not job_url.startswith("http"): continue
+                
+                location = "서울"
+                chips = card.find_all("span", class_=re.compile(r"text-typo-b4-14"))
+                for chip_el in chips:
+                    txt = chip_el.text.strip()
+                    if "서울 " in txt:
+                        location = txt
+                        break
+                
+                is_safe, warnings = analyze_job_safety(title + " " + company)
+                
+                tags = ["#계약직/아르바이트", "#IT개발"]
+                wage_type = "협의"
+                wage_amount = 0
+                
+                page_jobs.append({
+                    "original_url": job_url,
+                    "platform": "잡코리아",
+                    "title": title,
+                    "company_name": company,
+                    "work_duration": "상세정보 확인",
+                    "work_days": "주 5일",
+                    "work_hours": "",
+                    "weekly_work_hours": 0,
+                    "location": location,
+                    "wage_type": wage_type,
+                    "wage_amount": wage_amount,
+                    "has_employment_insurance": True,
+                    "is_contract_worker": True,
+                    "is_safe": is_safe,
+                    "warning_tags": warnings,
+                    "tags": tags
+                })
+                
+            all_jobs.extend(page_jobs)
+            print(f"📄 [잡코리아] {page_num}페이지: ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
+            
+            page_num += 1
+            if page_num > 100: break
+            time.sleep(1.5)
+            
+        except Exception as e:
+            print(f"   ❌ [잡코리아] {page_num}페이지 에러: {e}")
+            break
+            
+    return all_jobs
+
+# =============================================
 # DB 저장
 # =============================================
 def upsert_jobs(jobs: list):
@@ -377,9 +462,10 @@ def main():
     
     albamon_jobs = crawl_albamon()
     alba_heaven_jobs = crawl_alba_heaven()
+    jobkorea_jobs = crawl_jobkorea()
     
-    total_jobs = albamon_jobs + alba_heaven_jobs
-    print(f"\n✨ 수집 완료: 알바몬({len(albamon_jobs)}건) + 알바천국({len(alba_heaven_jobs)}건) = 총 {len(total_jobs)}건")
+    total_jobs = albamon_jobs + alba_heaven_jobs + jobkorea_jobs
+    print(f"\n✨ 수집 완료: 알바몬({len(albamon_jobs)}건) + 알바천국({len(alba_heaven_jobs)}건) + 잡코리아({len(jobkorea_jobs)}건) = 총 {len(total_jobs)}건")
     
     upsert_jobs(total_jobs)
     
