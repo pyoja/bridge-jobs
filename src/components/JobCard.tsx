@@ -1,73 +1,102 @@
+"use client";
+
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ExternalLink, Clock, CalendarDays, Building2 } from 'lucide-react';
+import { ExternalLink, Clock, CalendarDays, Building2, Heart, EyeOff } from 'lucide-react';
 import { Selectable } from 'kysely';
 import { JobsTable } from '@/types/database';
+import { useJobPreferences } from '@/hooks/useJobPreferences';
 
 export type JobType = Selectable<JobsTable>;
 
 export function JobCard({ job }: { job: JobType }) {
+  const { toggleFavorite, hideJob, isFavorite, isHidden, loaded } = useJobPreferences();
+
   const formatWage = (amount: number | null) => {
     if (!amount) return '회사내규에 따름';
     return amount.toLocaleString() + '원';
   };
 
-  const getPlatformColor = (platform: string) => {
-    if (platform.toLowerCase().includes('mon')) return 'bg-orange-100 text-orange-700';
-    if (platform.toLowerCase().includes('heaven')) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-gray-100 text-gray-700 border-gray-300';
-  };
+  // 숨겨진 공고는 렌더링하지 않음
+  if (loaded && isHidden(job.original_url)) return null;
+
+  const fav = loaded && isFavorite(job.original_url);
 
   return (
-    <Card className="hover:shadow-md transition-shadow group border-zinc-200 dark:border-zinc-800 flex flex-col h-full">
-      <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50">
-        <div className="flex justify-between items-start mb-2">
-          <Badge variant="secondary" className={`text-xs font-semibold ${getPlatformColor(job.platform)}`}>
-            {job.platform.toUpperCase()}
+    <Card className="hover:shadow-md transition-shadow group border-zinc-200 dark:border-zinc-800 flex flex-col h-full relative">
+      {/* 즐겨찾기 + 숨기기 버튼 */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+        <button
+          onClick={() => toggleFavorite(job.original_url)}
+          title={fav ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+          className={`p-1.5 rounded-full transition-all ${
+            fav
+              ? "bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400"
+              : "bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-400 dark:bg-zinc-800 dark:hover:bg-red-900/40"
+          }`}
+        >
+          <Heart className={`w-3.5 h-3.5 ${fav ? "fill-current" : ""}`} />
+        </button>
+        <button
+          onClick={() => hideJob(job.original_url)}
+          title="이 공고 숨기기"
+          className="p-1.5 rounded-full bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all"
+        >
+          <EyeOff className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50 pr-20">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs font-semibold bg-orange-100 text-orange-700">
+            알바몬
           </Badge>
           {job.has_employment_insurance && (
-            <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm border-blue-600">
-              고용보험 O
-            </Badge>
+            <Badge className="bg-blue-600 text-white text-xs">고용보험 O</Badge>
           )}
         </div>
-        <CardTitle className="text-lg md:text-xl font-bold leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">
+        <CardTitle className="text-base font-bold leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">
           {job.title}
         </CardTitle>
-        <div className="flex items-center text-sm text-zinc-500 dark:text-zinc-400 mt-2 font-medium">
-          <Building2 className="w-4 h-4 mr-1.5 opacity-70" />
-          {job.company_name}
+        <div className="flex items-center text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium">
+          <Building2 className="w-3.5 h-3.5 mr-1.5 opacity-70 shrink-0" />
+          <span className="truncate">{job.company_name}</span>
         </div>
       </CardHeader>
-      
-      <CardContent className="pt-4 pb-2 grid grid-cols-2 gap-y-3 gap-x-4 text-sm flex-grow">
+
+      <CardContent className="pt-4 pb-2 flex flex-col gap-2 text-sm flex-grow">
         {job.location && (
-          <div className="flex items-center text-zinc-700 dark:text-zinc-300 col-span-2">
-            <svg className="w-4 h-4 mr-2 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          <div className="flex items-center text-zinc-600 dark:text-zinc-400">
+            <svg className="w-3.5 h-3.5 mr-2 shrink-0 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
             <span className="truncate">{job.location}</span>
           </div>
         )}
-        <div className="flex items-center text-zinc-700 dark:text-zinc-300">
-          <CalendarDays className="w-4 h-4 mr-2 text-zinc-400" />
-          <span>{job.work_duration} {job.work_days && `· ${job.work_days}`}</span>
+        <div className="flex items-center text-zinc-600 dark:text-zinc-400">
+          <CalendarDays className="w-3.5 h-3.5 mr-2 shrink-0 text-zinc-400" />
+          <span>{job.work_duration}</span>
         </div>
-        <div className="flex items-center text-zinc-700 dark:text-zinc-300">
-          <Clock className="w-4 h-4 mr-2 text-zinc-400" />
+        <div className="flex items-center text-zinc-600 dark:text-zinc-400">
+          <Clock className="w-3.5 h-3.5 mr-2 shrink-0 text-zinc-400" />
           <span>{job.work_hours || '협의'}</span>
         </div>
-        <div className="flex items-center text-zinc-900 dark:text-zinc-100 font-semibold col-span-2 pt-1 border-t border-dashed border-zinc-200 dark:border-zinc-800 mt-1 pb-1">
-          <Badge variant="outline" className="mr-2 text-xs border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900">
+
+        {/* 급여 */}
+        <div className="flex items-center gap-2 pt-2 border-t border-dashed border-zinc-200 dark:border-zinc-800 mt-1">
+          <Badge variant="outline" className="text-xs border-zinc-300 dark:border-zinc-700 shrink-0">
             {job.wage_type || '급여'}
           </Badge>
-          <span className="text-[15px]">{formatWage(job.wage_amount)}</span>
+          <span className="font-bold text-zinc-900 dark:text-zinc-100">{formatWage(job.wage_amount)}</span>
         </div>
 
-        {/* 태그 리스트 */}
+        {/* 태그 */}
         {job.tags && job.tags.length > 0 && (
-          <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
+          <div className="flex flex-wrap gap-1.5 mt-1">
             {job.tags.map((tag, idx) => (
-              <Badge key={idx} variant="secondary" className="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 font-normal px-2 space-x-0 rounded-md">
+              <Badge key={idx} variant="secondary"
+                className="bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 font-normal text-xs rounded-md">
                 {tag}
               </Badge>
             ))}
@@ -76,14 +105,14 @@ export function JobCard({ job }: { job: JobType }) {
       </CardContent>
 
       <CardFooter className="pt-2 pb-4 mt-auto">
-        <a 
-          href={job.original_url}  
-          target="_blank" 
+        <a
+          href={job.original_url}
+          target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 w-full bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-200 dark:text-black h-11 px-4 py-2 shadow"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-black text-white text-sm font-semibold py-2.5 px-4 transition-colors"
         >
           공고 원문 보기
-          <ExternalLink className="w-4 h-4 ml-2" />
+          <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </CardFooter>
     </Card>
