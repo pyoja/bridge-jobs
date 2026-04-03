@@ -3,41 +3,45 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useInView } from "react-intersection-observer";
-import { ArrowLeft, Heart, EyeOff, Briefcase } from "lucide-react";
+import { ArrowLeft, Heart, EyeOff, Briefcase, Loader2 } from "lucide-react";
 import { JobType, JobCard } from "@/components/JobCard";
 import { useJobPreferences } from "@/hooks/useJobPreferences";
+import { getJobsByUrls } from "@/actions/getJobsByUrls";
 
-export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
-  const { isFavorite, isHidden, loaded } = useJobPreferences();
+export default function SavedJobsClient() {
+  const { favoriteUrls, hiddenUrls, loaded } = useJobPreferences();
   const [tab, setTab] = useState<"favorites" | "hidden">("favorites");
+  const [jobs, setJobs] = useState<JobType[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
   const [displayedCount, setDisplayedCount] = useState(15);
-  
-  const { ref, inView } = useInView({
-    threshold: 0,
-    rootMargin: "200px",
-  });
 
-  if (!loaded) {
-    return <div className="min-h-screen bg-zinc-50 dark:bg-black p-8 text-center text-zinc-500">불러오는 중...</div>;
-  }
+  const { ref, inView } = useInView({ threshold: 0, rootMargin: "200px" });
 
-  const favJobs = allJobs.filter((j) => isFavorite(j.original_url));
-  const hidJobs = allJobs.filter((j) => isHidden(j.original_url));
-
-  const displayJobs = tab === "favorites" ? favJobs : hidJobs;
-  const chunkedJobs = displayJobs.slice(0, displayedCount);
-
-  // 탭이 바뀔 때 노출 갯수 리셋
+  // localStorage 로드 완료 후, 탭에 맞는 URL 목록으로 DB에서 공고만 조회
   useEffect(() => {
+    if (!loaded) return;
+
+    const urls = tab === "favorites" ? favoriteUrls : hiddenUrls;
+    if (urls.length === 0) {
+      setJobs([]);
+      return;
+    }
+
+    setIsFetching(true);
     setDisplayedCount(15);
-  }, [tab]);
+    getJobsByUrls(urls)
+      .then(setJobs)
+      .finally(() => setIsFetching(false));
+  }, [loaded, tab, favoriteUrls.join(','), hiddenUrls.join(',')]);
 
   // 스크롤 시 추가 노출
   useEffect(() => {
-    if (inView && displayedCount < displayJobs.length) {
+    if (inView && displayedCount < jobs.length) {
       setDisplayedCount((prev) => prev + 15);
     }
-  }, [inView, displayJobs.length, displayedCount]);
+  }, [inView, jobs.length, displayedCount]);
+
+  const chunkedJobs = jobs.slice(0, displayedCount);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans pb-20">
@@ -73,7 +77,7 @@ export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
             }`}
           >
             <Heart className={`w-4 h-4 ${tab === "favorites" ? "fill-current" : ""}`} />
-            즐겨찾기 ({favJobs.length})
+            즐겨찾기 ({favoriteUrls.length})
           </button>
           <button
             onClick={() => setTab("hidden")}
@@ -84,11 +88,17 @@ export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
             }`}
           >
             <EyeOff className="w-4 h-4" />
-            숨긴 공고 ({hidJobs.length})
+            숨긴 공고 ({hiddenUrls.length})
           </button>
         </div>
 
-        {displayJobs.length === 0 ? (
+        {/* 로딩 중 */}
+        {(isFetching || !loaded) ? (
+          <div className="py-24 flex flex-col items-center justify-center text-center">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+            <p className="text-zinc-500 text-sm">불러오는 중...</p>
+          </div>
+        ) : jobs.length === 0 ? (
           <div className="py-24 flex flex-col items-center justify-center text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white/50 dark:bg-zinc-900/50">
             {tab === "favorites" ? (
               <Heart className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mb-3" />
@@ -116,9 +126,10 @@ export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
                 <JobCard key={job.id} job={job} showHidden={tab === "hidden"} />
               ))}
             </div>
-            
-            {displayedCount < displayJobs.length && (
-              <div ref={ref} className="h-20" />
+            {displayedCount < jobs.length && (
+              <div ref={ref} className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+              </div>
             )}
           </div>
         )}

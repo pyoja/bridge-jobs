@@ -1,16 +1,10 @@
-import { db } from "@/lib/db";
 import SavedJobsClient from "./SavedJobsClient";
 
-export const revalidate = 60;
 
-export default async function SavedPage() {
-  // DB에서 최신 공고 모두 가져오기
-  const jobs = await db
-    .selectFrom('jobs')
-    .selectAll()
-    .where('is_safe', '=', true)
-    .orderBy('created_at', 'desc')
-    .execute();
+export const revalidate = 0; // 보관함은 항상 최신 상태
 
-  return <SavedJobsClient allJobs={jobs} />;
+export default function SavedPage() {
+  // 서버에서 공고를 모두 가져오지 않음
+  // 클라이언트가 localStorage의 URL 목록을 읽은 뒤 필요한 것만 요청
+  return <SavedJobsClient />;
 }

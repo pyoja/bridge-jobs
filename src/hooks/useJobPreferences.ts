@@ -44,5 +44,15 @@ export function useJobPreferences() {
   const isFavorite = (url: string) => favorites.includes(url);
   const isHidden = (url: string) => hidden.includes(url);
 
-  return { favorites, hidden, loaded, toggleFavorite, hideJob, isFavorite, isHidden };
+  return {
+    favorites,
+    hidden,
+    favoriteUrls: favorites,  // alias
+    hiddenUrls: hidden,        // alias
+    loaded,
+    toggleFavorite,
+    hideJob,
+    isFavorite,
+    isHidden,
+  };
 }
