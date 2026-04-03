@@ -1,6 +1,6 @@
 """
-Bridge Jobs 알바몬 크롤러 v3 - requests 기반 (Playwright 제거)
-- __NEXT_DATA__ JSON을 직접 파싱 (봇 탐지 우회)
+Bridge Jobs 크롤러 v4 - requests 기반, BeautifulSoup 추가 (알바천국 지원)
+- 알바몬 & 알바천국 무제한 페이지 수집
 - DATABASE_URL 환경변수로 psycopg2 연결
 """
 
@@ -10,11 +10,11 @@ import json
 import time
 import psycopg2
 from psycopg2.extras import execute_values
+from bs4 import BeautifulSoup
 
 try:
     import requests
 except ImportError:
-    import urllib.request as _urllib
     requests = None
 
 # =============================================
@@ -79,15 +79,12 @@ def normalize_wage(pay_str: str) -> int:
 
 def normalize_wage_type(pay_type_key: str) -> str:
     mapping = {
-        "MONTHLY_SALARY": "월급",
-        "HOURLY_WAGE": "시급",
-        "DAILY_WAGE": "일급",
-        "WEEKLY_WAGE": "주급",
+        "MONTHLY_SALARY": "월급", "HOURLY_WAGE": "시급",
+        "DAILY_WAGE": "일급", "WEEKLY_WAGE": "주급",
     }
     return mapping.get(pay_type_key, "협의")
 
 def fetch_html(url: str) -> str:
-    """HTML을 가져오는 함수 (requests 우선, 없으면 urllib)"""
     if requests:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
@@ -98,35 +95,28 @@ def fetch_html(url: str) -> str:
         with urllib.request.urlopen(req, timeout=15) as res:
             return res.read().decode("utf-8")
 
-def parse_jobs_from_html(html: str) -> list:
-    """__NEXT_DATA__ JSON에서 공고 컬렉션을 추출"""
+def parse_jobs_from_albamon_html(html: str) -> list:
     match = re.search(
         r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>',
         html, re.DOTALL
     )
     if not match:
-        print("   ❌ __NEXT_DATA__ 없음 (봇 차단 또는 구조 변경)")
         return []
-    
     data = json.loads(match.group(1))
     try:
-        state_data = (
-            data["props"]["pageProps"]["dehydratedState"]
-            ["queries"][0]["state"]["data"]
-        )
-        collection = state_data["base"]["normal"]["collection"]
-        return collection
-    except (KeyError, IndexError, TypeError) as e:
-        print(f"   ❌ JSON 경로 파싱 실패: {e}")
+        return data["props"]["pageProps"]["dehydratedState"]["queries"][0]["state"]["data"]["base"]["normal"]["collection"]
+    except Exception:
         return []
 
 # =============================================
-# 크롤링 메인
+# 크롤러: 알바몬
 # =============================================
-def crawl_all_pages(max_pages: int = 10) -> list:
+def crawl_albamon() -> list:
     all_jobs = []
+    page_num = 1
     
-    for page_num in range(1, max_pages + 1):
+    print("\n--- [알바몬] 수집 시작 ---")
+    while True:
         url = (
             "https://www.albamon.com/jobs/area"
             f"?page={page_num}&size=50"
@@ -135,16 +125,14 @@ def crawl_all_pages(max_pages: int = 10) -> list:
             "&workPeriodTypes=ONE_WEEK_TO_ONE_MONTH%2CONE_MONTH_TO_THREE_MONTH"
         )
         
-        print(f"📄 {page_num}페이지 수집 중... ({url[:70]}...)")
-        
         try:
             html = fetch_html(url)
-            collection = parse_jobs_from_html(html)
+            collection = parse_jobs_from_albamon_html(html)
             
             if not collection:
-                print(f"   ⚠️ {page_num}페이지에서 공고를 찾지 못했습니다. 중단합니다.")
+                print(f"📄 [알바몬] {page_num}페이지 - 더 이상 공고가 없습니다. (수집 종료)")
                 break
-            
+                
             page_jobs = []
             for item in collection:
                 try:
@@ -152,23 +140,20 @@ def crawl_all_pages(max_pages: int = 10) -> list:
                     title = item.get("recruitTitle", "").strip()
                     company = item.get("companyName", "회사명 비공개").strip()
                     working_time = item.get("workingTime", "")
-                    working_period = item.get("workingPeriod", "단기")
+                    working_period = item.get("workingPeriod", "1주~3개월")
                     workplace_area = item.get("workplaceArea", "서울")
                     pay_raw = item.get("pay", "0")
                     pay_type_key = item.get("payType", {}).get("key", "HOURLY_WAGE")
                     
-                    if not title or not recruit_no:
-                        continue
+                    if not title or not recruit_no: continue
                     
                     job_url = f"https://www.albamon.com/jobs/detail/{recruit_no}"
                     weekly_hours = calculate_weekly_hours(working_time)
                     is_safe, warnings = analyze_job_safety(title + " " + company)
                     
                     tags = ["#계약직", "#고용보험가입"]
-                    if weekly_hours >= 40:
-                        tags.append("#주40시간이상")
-                    elif weekly_hours >= 15:
-                        tags.append("#주15시간이상")
+                    if weekly_hours >= 40: tags.append("#주40시간이상")
+                    elif weekly_hours >= 15: tags.append("#주15시간이상")
                     
                     page_jobs.append({
                         "original_url": job_url,
@@ -176,7 +161,7 @@ def crawl_all_pages(max_pages: int = 10) -> list:
                         "title": title,
                         "company_name": company,
                         "work_duration": working_period,
-                        "work_days": "주 5일",
+                        "work_days": "주 5일", # 기본값
                         "work_hours": working_time,
                         "weekly_work_hours": weekly_hours,
                         "location": workplace_area,
@@ -192,16 +177,137 @@ def crawl_all_pages(max_pages: int = 10) -> list:
                     continue
             
             all_jobs.extend(page_jobs)
-            print(f"   ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
+            print(f"📄 [알바몬] {page_num}페이지: ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
             
-            # 페이지 간 딜레이 (차단 방지)
-            if page_num < max_pages:
-                time.sleep(1.5)
-                
+            page_num += 1
+            if page_num > 100: # 무한루프 방지 (최대 5000개 수집)
+                break
+            time.sleep(1.5)
+            
         except Exception as e:
-            print(f"   ❌ {page_num}페이지 에러: {e}")
+            print(f"   ❌ [알바몬] {page_num}페이지 에러: {e}")
             break
+            
+    return all_jobs
+
+# =============================================
+# 크롤러: 알바천국
+# =============================================
+def crawl_alba_heaven() -> list:
+    all_jobs = []
+    page_num = 1
     
+    print("\n--- [알바천국] 수집 시작 ---")
+    while True:
+        url = (
+            f"https://www.alba.co.kr/job/area/mainlocal?schnm=LOCAL&viewtype=L&sidocd=02"
+            f"&hidListView=LIST&hidSortCnt=50&page={page_num}&strAreaMulti=02%7C%7C%EC%A0%84%EC%B2%B4%7C%7C"
+            f"&workperiodcd=H03&workperiodcd=H04&hiretypecd=K03&welfarecd=T01%2C+T02%2C+T03%2C+T04"
+        )
+        
+        try:
+            html = fetch_html(url)
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            normal_info = soup.find(id="NormalInfo")
+            if not normal_info:
+                print(f"📄 [알바천국] {page_num}페이지 - 더 이상 공고가 없습니다. (수집 종료)")
+                break
+                
+            tbody = normal_info.find("tbody")
+            if not tbody: break
+            
+            rows = tbody.find_all("tr")
+            if not rows or len(rows) == 0: break
+            
+            page_jobs = []
+            found_valid = False
+            
+            for row in rows:
+                if row.get("class") and "empty" in row.get("class"):
+                    continue
+                    
+                title_el = row.select_one(".title span.company")
+                if not title_el: continue
+                
+                company_el = row.select_one(".company .store")
+                company = company_el.text.strip() if company_el else "회사명 비공개"
+                title = title_el.text.strip()
+                
+                link_el = row.select_one("a.goodsBox-info")
+                job_url = "https://www.alba.co.kr" + link_el["href"] if link_el and link_el.has_attr("href") else ""
+                
+                if not job_url: continue
+                
+                area_el = row.select_one(".local")
+                workplace_area = area_el.text.strip().replace('\xa0', ' ') if area_el else "서울"
+                
+                # 근무기간 (알바천국은 별도로 검색했으므로 기본값 사용 하거나 공고 본문 내용 사용)
+                working_period = "1주~3개월" 
+                
+                data_el = row.select_one(".data")
+                working_time = ""
+                if data_el:
+                    time_span = data_el.select_one(".time")
+                    working_time = time_span.text.strip() if time_span else ""
+                
+                pay_el = row.select_one(".pay")
+                pay_raw = "0"
+                pay_type_key = "HOURLY_WAGE"
+                
+                if pay_el:
+                    num_el = pay_el.select_one(".number")
+                    pay_raw = num_el.text.strip() if num_el else "0"
+                    
+                    icon_el = pay_el.select_one(".payIcon")
+                    pay_type_text = icon_el.text.strip() if icon_el else ""
+                    
+                    mapping = {"시급": "HOURLY_WAGE", "일급": "DAILY_WAGE", "주급": "WEEKLY_WAGE", "월급": "MONTHLY_SALARY"}
+                    pay_type_key = mapping.get(pay_type_text, "HOURLY_WAGE")
+                
+                found_valid = True
+                weekly_hours = calculate_weekly_hours(working_time)
+                is_safe, warnings = analyze_job_safety(title + " " + company)
+                
+                tags = ["#계약직", "#고용보험가입"]
+                if weekly_hours >= 40: tags.append("#주40시간이상")
+                elif weekly_hours >= 15: tags.append("#주15시간이상")
+                
+                page_jobs.append({
+                    "original_url": job_url,
+                    "platform": "알바천국",
+                    "title": title,
+                    "company_name": company,
+                    "work_duration": working_period,
+                    "work_days": "주 5일",
+                    "work_hours": working_time,
+                    "weekly_work_hours": weekly_hours,
+                    "location": workplace_area,
+                    "wage_type": normalize_wage_type(pay_type_key),
+                    "wage_amount": normalize_wage(pay_raw),
+                    "has_employment_insurance": True,
+                    "is_contract_worker": True,
+                    "is_safe": is_safe,
+                    "warning_tags": warnings,
+                    "tags": tags
+                })
+                
+            if not found_valid:
+                print(f"📄 [알바천국] {page_num}페이지 - 유효 공고 없음. (수집 종료)")
+                break
+                
+            all_jobs.extend(page_jobs)
+            print(f"📄 [알바천국] {page_num}페이지: ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
+            
+            page_num += 1
+            if page_num > 100: # 무한루프 방지
+                break
+            time.sleep(1.5)
+            
+        except Exception as e:
+            print(f"   ❌ [알바천국] {page_num}페이지 에러: {e}")
+            break
+
     return all_jobs
 
 # =============================================
@@ -212,7 +318,7 @@ def upsert_jobs(jobs: list):
         print("적재할 공고가 없습니다.")
         return
     
-    print(f"\n📦 {len(jobs)}개 공고를 DB에 저장 중...")
+    print(f"\n📦 총 {len(jobs)}개 공고를 DB에 저장 중...")
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     
@@ -264,17 +370,22 @@ def upsert_jobs(jobs: list):
 # 메인 실행
 # =============================================
 def main():
-    print("=" * 50)
-    print("  Bridge Jobs 크롤러 v3 (requests 기반)")
-    print("  알바몬: 서울 전체, 계약직, 1주~3개월")
-    print("=" * 50)
+    print("=" * 60)
+    print("  Bridge Jobs 자동화 크롤러 v4 (알바몬 + 알바천국)")
+    print("  서울 전체 | 계약직 | 1주~3개월 | 데이터 무제한")
+    print("=" * 60)
     
-    jobs = crawl_all_pages(max_pages=10)
-    upsert_jobs(jobs)
+    albamon_jobs = crawl_albamon()
+    alba_heaven_jobs = crawl_alba_heaven()
     
-    print("=" * 50)
-    print(f"  완료! 총 {len(jobs)}개 수집")
-    print("=" * 50)
+    total_jobs = albamon_jobs + alba_heaven_jobs
+    print(f"\n✨ 수집 완료: 알바몬({len(albamon_jobs)}건) + 알바천국({len(alba_heaven_jobs)}건) = 총 {len(total_jobs)}건")
+    
+    upsert_jobs(total_jobs)
+    
+    print("=" * 60)
+    print(f"  실행 완료!")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()

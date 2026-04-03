@@ -60,7 +60,7 @@ export default async function Home({ searchParams }: SearchParamsProps) {
     query = query.where('weekly_work_hours', '>=', 40);
   }
 
-  const jobs = await query.limit(500).execute();
+  const jobs = await query.execute();
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans pb-20">
