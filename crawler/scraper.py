@@ -112,8 +112,9 @@ def fetch_html_euckr(url: str) -> str:
     if requests:
         resp = requests.get(url, headers=ALBA_HEADERS, timeout=15)
         resp.raise_for_status()
-        resp.encoding = 'euc-kr'  # 인코딩 강제 지정
-        return resp.text
+        # resp.encoding 대입은 환경에 따라 무시될 수 있음
+        # raw bytes를 직접 euc-kr 디코딩하는 것이 가장 확실함
+        return resp.content.decode('euc-kr', errors='replace')
     else:
         import urllib.request
         req = urllib.request.Request(url, headers=ALBA_HEADERS)

@@ -48,8 +48,19 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
 
       <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50 pr-20">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <Badge variant="secondary" className="text-xs font-semibold bg-orange-100 text-orange-700">
-            알바몬
+          <Badge
+            variant="secondary"
+            className={`text-xs font-semibold ${
+              job.platform === '알바몬'
+                ? 'bg-orange-100 text-orange-700'
+                : job.platform === '알바천국'
+                ? 'bg-green-100 text-green-700'
+                : job.platform === '잡코리아'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-zinc-100 text-zinc-600'
+            }`}
+          >
+            {job.platform ?? '알바몬'}
           </Badge>
           {job.has_employment_insurance && (
             <Badge className="bg-blue-600 text-white text-xs">고용보험 O</Badge>
