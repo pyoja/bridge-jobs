@@ -20,11 +20,6 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r crawler/requirements.txt
 
-      - name: Install Playwright + system deps (자동)
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
-
       - name: Run Albamon Crawler
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
