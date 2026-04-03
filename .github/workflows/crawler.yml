@@ -28,6 +28,6 @@ jobs:
       - name: Execute Crawler
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SEARCH_KEYWORD: ${{ github.event.inputs.keyword || '단기 계약직' }}
         run: python crawler/scraper.py
