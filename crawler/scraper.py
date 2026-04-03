@@ -227,14 +227,14 @@ def crawl_alba_heaven() -> list:
                 if row.get("class") and "empty" in row.get("class"):
                     continue
                     
-                title_el = row.select_one(".title span.company")
-                if not title_el: continue
+                company_el = row.select_one("td.title span.company")
+                if not company_el: continue
+                company = company_el.text.strip()
                 
-                company_el = row.select_one(".company .store")
-                company = company_el.text.strip() if company_el else "회사명 비공개"
-                title = title_el.text.strip()
+                title_el = row.select_one("td.title span.title")
+                title = title_el.text.strip() if title_el else "제목 없음"
                 
-                link_el = row.select_one("a.goodsBox-info")
+                link_el = row.select_one("td.title a.info")
                 job_url = "https://www.alba.co.kr" + link_el["href"] if link_el and link_el.has_attr("href") else ""
                 
                 if not job_url: continue
