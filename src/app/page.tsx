@@ -1,5 +1,6 @@
 import { TagFilter } from "@/components/TagFilter";
 import { JobCard } from "@/components/JobCard";
+import { CrawlTriggerButton } from "@/components/CrawlTriggerButton";
 import { Briefcase } from "lucide-react";
 import { db } from "@/lib/db";
 import { sql } from 'kysely';
@@ -70,9 +71,13 @@ export default async function Home({ searchParams }: SearchParamsProps) {
               브릿지잡스
             </h1>
           </div>
-          <p className="text-sm font-medium text-zinc-500 hidden sm:block">
-            자진 퇴사자를 위한 징검다리 일자리 큐레이션
-          </p>
+          
+          <div className="flex items-center gap-4">
+            <p className="text-sm font-medium text-zinc-500 hidden md:block">
+              관리자 모드:
+            </p>
+            <CrawlTriggerButton />
+          </div>
         </div>
       </header>
 
