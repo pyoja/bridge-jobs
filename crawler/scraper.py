@@ -25,6 +25,9 @@ if not DATABASE_URL:
     print("❌ 환경변수 DATABASE_URL 이 없습니다.")
     exit(1)
 
+# psycopg2는 pgbouncer 파라미터를 인식하지 못하므로 제거
+DATABASE_URL = DATABASE_URL.replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
+
 DANGER_KEYWORDS = ['3.3%', '사업소득', '프리랜서', '위촉직', '도급', '원천징수']
 
 HEADERS = {
