@@ -60,7 +60,7 @@ export default async function Home({ searchParams }: SearchParamsProps) {
     query = query.where('weekly_work_hours', '>=', 40);
   }
 
-  const jobs = await query.limit(200).execute();
+  const jobs = await query.limit(500).execute();
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans pb-20">
@@ -75,13 +75,19 @@ export default async function Home({ searchParams }: SearchParamsProps) {
               브릿지잡스
             </h1>
           </div>
-          <Link
-            href="/about"
-            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-          >
-            <Info className="w-4 h-4" />
-            <span className="hidden sm:inline">이 사이트 소개</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/saved" className="flex items-center gap-1.5 text-sm font-semibold text-zinc-700 hover:text-blue-600 dark:text-zinc-300 transition-colors">
+              <span className="bg-red-100 dark:bg-red-900/30 p-1 rounded-full"><svg className="w-3.5 h-3.5 text-red-500 fill-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span>
+              <span className="hidden sm:inline">내 보관함</span>
+            </Link>
+            <Link
+              href="/about"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            >
+              <Info className="w-4 h-4" />
+              <span className="hidden sm:inline">이 사이트 소개</span>
+            </Link>
+          </div>
         </div>
       </header>
 

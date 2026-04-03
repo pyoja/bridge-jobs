@@ -9,7 +9,7 @@ import { useJobPreferences } from '@/hooks/useJobPreferences';
 
 export type JobType = Selectable<JobsTable>;
 
-export function JobCard({ job }: { job: JobType }) {
+export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?: boolean }) {
   const { toggleFavorite, hideJob, isFavorite, isHidden, loaded } = useJobPreferences();
 
   const formatWage = (amount: number | null) => {
@@ -17,8 +17,8 @@ export function JobCard({ job }: { job: JobType }) {
     return amount.toLocaleString() + '원';
   };
 
-  // 숨겨진 공고는 렌더링하지 않음
-  if (loaded && isHidden(job.original_url)) return null;
+  // 숨겨진 공고는 본 화면에서는 렌더링하지 않음
+  if (!showHidden && loaded && isHidden(job.original_url)) return null;
 
   const fav = loaded && isFavorite(job.original_url);
 
@@ -55,12 +55,12 @@ export function JobCard({ job }: { job: JobType }) {
             <Badge className="bg-blue-600 text-white text-xs">고용보험 O</Badge>
           )}
         </div>
-        <CardTitle className="text-base font-bold leading-tight group-hover:text-blue-600 transition-colors line-clamp-2">
+        <CardTitle className="text-base sm:text-lg font-bold leading-snug group-hover:text-blue-600 transition-colors">
           {job.title}
         </CardTitle>
-        <div className="flex items-center text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium">
-          <Building2 className="w-3.5 h-3.5 mr-1.5 opacity-70 shrink-0" />
-          <span className="truncate">{job.company_name}</span>
+        <div className="flex items-start text-sm text-zinc-500 dark:text-zinc-400 mt-2 font-medium break-words">
+          <Building2 className="w-3.5 h-3.5 mr-1.5 mt-0.5 opacity-70 shrink-0" />
+          <span className="leading-snug">{job.company_name}</span>
         </div>
       </CardHeader>
 
