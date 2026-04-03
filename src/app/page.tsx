@@ -19,9 +19,11 @@ export default async function Home({ searchParams }: SearchParamsProps) {
   const include = typeof resolvedParams.include === 'string' ? resolvedParams.include : undefined;
   const exclude = typeof resolvedParams.exclude === 'string' ? resolvedParams.exclude : undefined;
   const min_hours = typeof resolvedParams.min_hours === 'string' ? resolvedParams.min_hours : undefined;
+  const platform = typeof resolvedParams.platform === 'string' ? resolvedParams.platform : undefined;
   
   // 파라미터 매핑 (getJobs 액션과 구조를 맞춤)
   const actionParams = {
+    platform,
     duration,
     include,
     exclude,
@@ -33,6 +35,8 @@ export default async function Home({ searchParams }: SearchParamsProps) {
 
   // 전체 개수 카운트를 위한 별도 쿼리
   let countQuery = db.selectFrom('jobs').select((eb) => eb.fn.count('id').as('count')).where('is_safe', '=', true);
+  
+  if (platform && platform !== 'all') countQuery = countQuery.where('platform', '=', platform);
   
   if (duration === 'short') countQuery = countQuery.where('work_duration', 'like', '%1주%');
   else if (duration === 'medium') countQuery = countQuery.where('work_duration', 'like', '%1개월%');

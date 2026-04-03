@@ -18,6 +18,7 @@ function FilterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [platform, setPlatform] = useState(searchParams.get('platform') || 'all');
   const [area, setArea] = useState(searchParams.get('area') || '전체');
   const [include, setInclude] = useState(searchParams.get('include') || '');
   const [exclude, setExclude] = useState(searchParams.get('exclude') || '');
@@ -27,9 +28,10 @@ function FilterContent() {
   const [minHours, setMinHours] = useState(searchParams.get('min_hours') === '40');
 
   const applyFilter = (overrides?: Partial<{
-    area: string; include: string; exclude: string;
+    platform: string; area: string; include: string; exclude: string;
     workPeriod: WorkPeriod; minHours: boolean;
   }>) => {
+    const pf = overrides?.platform ?? platform;
     const a = overrides?.area ?? area;
     const inc = overrides?.include ?? include;
     const exc = overrides?.exclude ?? exclude;
@@ -37,6 +39,7 @@ function FilterContent() {
     const mh = overrides?.minHours ?? minHours;
 
     const params = new URLSearchParams();
+    if (pf && pf !== 'all') params.set('platform', pf);
     if (a && a !== '전체') params.set('area', a);
     if (inc.trim()) params.set('include', inc.trim());
     if (exc.trim()) params.set('exclude', exc.trim());
@@ -46,6 +49,7 @@ function FilterContent() {
   };
 
   const resetAll = () => {
+    setPlatform('all');
     setArea('전체');
     setInclude('');
     setExclude('');
@@ -57,8 +61,27 @@ function FilterContent() {
   return (
     <div className="w-full mb-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-5 shadow-sm flex flex-col gap-4">
 
-      {/* 1행: 지역 + 주40시간 */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+      {/* 1행: 플랫폼 + 지역 + 주40시간 */}
+      <div className="flex flex-col sm:flex-row sm:items-end gap-4 overflow-x-auto pb-1">
+        
+        {/* 플랫폼 */}
+        <div>
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">
+            수집처
+          </label>
+          <select
+            value={platform}
+            onChange={(e) => { setPlatform(e.target.value); applyFilter({ platform: e.target.value }); }}
+            className="appearance-none bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-sm font-medium text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none w-32"
+          >
+            <option value="all">전체보기</option>
+            <option value="알바몬">알바몬</option>
+            <option value="알바천국">알바천국</option>
+            <option value="잡코리아">잡코리아</option>
+          </select>
+        </div>
+
+        {/* 지역 */}
         <div>
           <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">
             지역 (서울)
@@ -114,25 +137,30 @@ function FilterContent() {
 
       <hr className="border-zinc-100 dark:border-zinc-800" />
 
-      {/* 2행: 키워드 */}
+      {/* 2행: 검색/키워드 */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
         <div>
           <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">
-            포함 키워드
+            검색어 (직무, 회사 등)
           </label>
-          <input
-            type="text"
-            value={include}
-            onChange={(e) => setInclude(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
-            placeholder="예: 사무, 단기"
-            className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-zinc-400" />
+            </div>
+            <input
+              type="text"
+              value={include}
+              onChange={(e) => setInclude(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
+              placeholder="예: 웹개발자, 카카오"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 flex gap-1 items-center">
             제외 키워드
-            <span className="text-[10px] text-zinc-400 ml-1">(쉼표 구분)</span>
+            <span className="text-[10px] text-zinc-400">(쉼표 구분)</span>
           </label>
           <input
             type="text"
