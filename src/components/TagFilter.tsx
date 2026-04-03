@@ -1,62 +1,61 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, Suspense } from "react";
+import { Suspense, useCallback } from "react";
 
-const FILTER_TAGS = [
-  "#1개월이하",
-  "#1~3개월단기",
-  "#주15시간이상",
-  "#고용보험가입",
-  "#계약직",
-];
-
-function TagFilterContent() {
+function FilterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentTag = searchParams.get('tag');
+  
+  const hasMinHours = searchParams.get('min_hours') === '40';
+  const hasInsured = searchParams.get('insured') === '1';
+  const hasContract = searchParams.get('contract') === '1';
 
-  const onTagClick = useCallback((tag: string) => {
+  const toggleParam = useCallback((key: string, value: string, checked: boolean) => {
     const params = new URLSearchParams(searchParams.toString());
-    const rawTag = tag.replace('#', '');
-    
-    if (params.get('tag') === rawTag) {
-      params.delete('tag'); // 이미 선택된 태그 재클릭 시 해제
+    if (checked) {
+      params.set(key, value);
     } else {
-      params.set('tag', rawTag);
+      params.delete(key);
     }
-    
     router.push(`/?${params.toString()}`);
   }, [router, searchParams]);
 
   return (
-    <div className="w-full py-6">
-      <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-          빠른 조건 필터
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {FILTER_TAGS.map((tag) => {
-            const rawTag = tag.replace('#', '');
-            const isActive = currentTag === rawTag;
-            
-            return (
-              <Badge
-                key={tag}
-                variant={isActive ? "default" : "outline"}
-                className={`px-4 py-1.5 text-sm cursor-pointer rounded-full transition-colors dark:border-zinc-800 ${
-                  isActive 
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-                  : 'border-zinc-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:bg-blue-900/30'
-                }`}
-                onClick={() => onTagClick(tag)}
-              >
-                {tag}
-              </Badge>
-            );
-          })}
-        </div>
+    <div className="w-full mb-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-wide">
+        실업급여 수급을 위한 필수 조건
+      </h3>
+      <div className="flex flex-col sm:flex-row gap-6">
+        <label className="flex items-center space-x-2.5 cursor-pointer group">
+          <input 
+            type="checkbox" 
+            className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            checked={hasMinHours}
+            onChange={(e) => toggleParam('min_hours', '40', e.target.checked)}
+          />
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors">주 40시간 이상</span>
+        </label>
+        
+        <label className="flex items-center space-x-2.5 cursor-pointer group">
+          <input 
+            type="checkbox" 
+            className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            checked={hasInsured}
+            onChange={(e) => toggleParam('insured', '1', e.target.checked)}
+          />
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors">고용보험 가입</span>
+        </label>
+
+        <label className="flex items-center space-x-2.5 cursor-pointer group">
+          <input 
+            type="checkbox" 
+            className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            checked={hasContract}
+            onChange={(e) => toggleParam('contract', '1', e.target.checked)}
+          />
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors">단기/기간제 (계약만료)</span>
+        </label>
       </div>
     </div>
   );
@@ -64,8 +63,8 @@ function TagFilterContent() {
 
 export function TagFilter() {
   return (
-    <Suspense fallback={<div className="h-24" />}>
-      <TagFilterContent />
+    <Suspense fallback={<div className="h-24 w-full bg-zinc-100 dark:bg-zinc-900 animate-pulse rounded-xl mb-8" />}>
+      <FilterContent />
     </Suspense>
   );
 }

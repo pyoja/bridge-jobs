@@ -3,7 +3,12 @@ name: Bridge Jobs Crawler
 on:
   schedule:
     - cron: '0 18 * * *' # 매일 UTC 18시 (KST 기준 새벽 3시)
-  workflow_dispatch: # 수동 실행 버튼 활성화
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: '스크래핑할 대상 키워드 입력'
+        required: true
+        default: '계약직 1개월'
 
 jobs:
   run-crawler:
@@ -24,4 +29,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SEARCH_KEYWORD: ${{ github.event.inputs.keyword || '단기 계약직' }}
         run: python crawler/scraper.py
