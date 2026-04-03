@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python / Crawler
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+# Local seeds
+seed-db.js
+init-db.js
