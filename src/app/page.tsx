@@ -1,5 +1,4 @@
 import { TagFilter } from "@/components/TagFilter";
-import { JobCard } from "@/components/JobCard";
 import { db } from "@/lib/db";
 import { Briefcase, ShieldCheck, Info } from "lucide-react";
 import Link from "next/link";
@@ -20,34 +19,36 @@ export default async function Home({ searchParams }: SearchParamsProps) {
   const exclude = typeof resolvedParams.exclude === 'string' ? resolvedParams.exclude : undefined;
   const min_hours = typeof resolvedParams.min_hours === 'string' ? resolvedParams.min_hours : undefined;
   const platform = typeof resolvedParams.platform === 'string' ? resolvedParams.platform : undefined;
-  
-  // 파라미터 매핑 (getJobs 액션과 구조를 맞춤)
-  const actionParams = {
-    platform,
-    duration,
-    include,
-    exclude,
-    min_hours,
-  };
+  const areas = typeof resolvedParams.areas === 'string' ? resolvedParams.areas : undefined;
 
-  // 초기 15개 렌더링 (서버 사이드 렌더링 최적화)
+  const actionParams = { platform, duration, include, exclude, min_hours, areas };
+
   const initialJobs = await getJobs({ ...actionParams, page: 1, limit: 15 });
 
-  // 전체 개수 카운트를 위한 별도 쿼리
+  // 전체 개수 카운트
   let countQuery = db.selectFrom('jobs').select((eb) => eb.fn.count('id').as('count')).where('is_safe', '=', true);
-  
+
   if (platform && platform !== 'all') countQuery = countQuery.where('platform', '=', platform);
-  
+
+  if (areas) {
+    const guList = areas.split(',').map(x => x.trim()).filter(Boolean);
+    if (guList.length > 0) {
+      countQuery = countQuery.where((eb) =>
+        eb.or(guList.map(gu => eb('location', 'like', `%${gu}%`)))
+      );
+    }
+  }
+
   if (duration === 'short') countQuery = countQuery.where('work_duration', 'like', '%1주%');
   else if (duration === 'medium') countQuery = countQuery.where('work_duration', 'like', '%1개월%');
-  
+
   if (include) {
     const keywords = include.split(',').map(x => x.trim()).filter(Boolean);
     for (const kw of keywords) {
       countQuery = countQuery.where((eb) => eb.or([ eb('title', 'like', `%${kw}%`), eb('company_name', 'like', `%${kw}%`) ]));
     }
   }
-  
+
   if (exclude) {
     const keywords = exclude.split(',').map(x => x.trim()).filter(Boolean);
     for (const kw of keywords) {
@@ -55,7 +56,7 @@ export default async function Home({ searchParams }: SearchParamsProps) {
       countQuery = countQuery.where('company_name', 'not like', `%${kw}%`);
     }
   }
-  
+
   if (min_hours === '40') countQuery = countQuery.where('weekly_work_hours', '>=', 40);
 
   const countResult = await countQuery.executeTakeFirst();
@@ -78,10 +79,7 @@ export default async function Home({ searchParams }: SearchParamsProps) {
               <span className="bg-red-100 dark:bg-red-900/30 p-1 rounded-full"><svg className="w-3.5 h-3.5 text-red-500 fill-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span>
               <span className="hidden sm:inline">내 보관함</span>
             </Link>
-            <Link
-              href="/about"
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-            >
+            <Link href="/about" className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
               <Info className="w-4 h-4" />
               <span className="hidden sm:inline">이 사이트 소개</span>
             </Link>

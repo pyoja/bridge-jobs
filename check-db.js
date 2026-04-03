@@ -3,8 +3,17 @@ const client = new Client({ connectionString: process.env.DATABASE_URL });
 
 async function check() {
   await client.connect();
-  const r = await client.query('SELECT COUNT(*) as cnt, MAX(created_at) as last FROM jobs');
-  console.log("총 공고 수:", r.rows[0].cnt, "/ 마지막 수집:", r.rows[0].last);
+  const r = await client.query(`
+    SELECT platform, location, COUNT(*) as cnt 
+    FROM jobs 
+    WHERE platform = '잡코리아'
+    GROUP BY platform, location 
+    ORDER BY cnt DESC
+    LIMIT 30
+  `);
+  r.rows.forEach(row => {
+    console.log(`[${row.platform}] "${row.location}" - ${row.cnt}건`);
+  });
   await client.end();
 }
 check();
