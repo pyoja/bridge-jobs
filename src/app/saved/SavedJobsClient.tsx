@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useInView } from "react-intersection-observer";
 import { ArrowLeft, Heart, EyeOff, Briefcase } from "lucide-react";
 import { JobType, JobCard } from "@/components/JobCard";
 import { useJobPreferences } from "@/hooks/useJobPreferences";
@@ -9,6 +10,12 @@ import { useJobPreferences } from "@/hooks/useJobPreferences";
 export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
   const { isFavorite, isHidden, loaded } = useJobPreferences();
   const [tab, setTab] = useState<"favorites" | "hidden">("favorites");
+  const [displayedCount, setDisplayedCount] = useState(15);
+  
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: "200px",
+  });
 
   if (!loaded) {
     return <div className="min-h-screen bg-zinc-50 dark:bg-black p-8 text-center text-zinc-500">불러오는 중...</div>;
@@ -18,6 +25,19 @@ export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
   const hidJobs = allJobs.filter((j) => isHidden(j.original_url));
 
   const displayJobs = tab === "favorites" ? favJobs : hidJobs;
+  const chunkedJobs = displayJobs.slice(0, displayedCount);
+
+  // 탭이 바뀔 때 노출 갯수 리셋
+  useEffect(() => {
+    setDisplayedCount(15);
+  }, [tab]);
+
+  // 스크롤 시 추가 노출
+  useEffect(() => {
+    if (inView && displayedCount < displayJobs.length) {
+      setDisplayedCount((prev) => prev + 15);
+    }
+  }, [inView, displayJobs.length, displayedCount]);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans pb-20">
@@ -90,10 +110,16 @@ export default function SavedJobsClient({ allJobs }: { allJobs: JobType[] }) {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {displayJobs.map((job) => (
-              <JobCard key={job.id} job={job} showHidden={tab === "hidden"} />
-            ))}
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {chunkedJobs.map((job) => (
+                <JobCard key={job.id} job={job} showHidden={tab === "hidden"} />
+              ))}
+            </div>
+            
+            {displayedCount < displayJobs.length && (
+              <div ref={ref} className="h-20" />
+            )}
           </div>
         )}
       </main>

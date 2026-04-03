@@ -3,6 +3,8 @@ import { JobCard } from "@/components/JobCard";
 import { db } from "@/lib/db";
 import { Briefcase, ShieldCheck, Info } from "lucide-react";
 import Link from "next/link";
+import { getJobs } from "@/actions/getJobs";
+import { JobInfiniteList } from "@/components/JobInfiniteList";
 
 export const revalidate = 60;
 
@@ -13,58 +15,50 @@ type SearchParamsProps = {
 export default async function Home({ searchParams }: SearchParamsProps) {
   const resolvedParams = await searchParams;
 
-  let query = db
-    .selectFrom('jobs')
-    .selectAll()
-    .where('is_safe', '=', true)
-    .orderBy('created_at', 'desc');
+  const duration = typeof resolvedParams.period === 'string' ? resolvedParams.period : undefined;
+  const include = typeof resolvedParams.include === 'string' ? resolvedParams.include : undefined;
+  const exclude = typeof resolvedParams.exclude === 'string' ? resolvedParams.exclude : undefined;
+  const min_hours = typeof resolvedParams.min_hours === 'string' ? resolvedParams.min_hours : undefined;
+  
+  // 파라미터 매핑 (getJobs 액션과 구조를 맞춤)
+  const actionParams = {
+    duration,
+    include,
+    exclude,
+    min_hours,
+  };
 
-  // 1. 지역 필터
-  const area = typeof resolvedParams.area === 'string' ? resolvedParams.area : null;
-  if (area && area !== '전체') {
-    query = query.where('location', 'like', `%${area}%`);
-  }
+  // 초기 15개 렌더링 (서버 사이드 렌더링 최적화)
+  const initialJobs = await getJobs({ ...actionParams, page: 1, limit: 15 });
 
-  // 2. 근무기간 필터
-  const period = typeof resolvedParams.period === 'string' ? resolvedParams.period : null;
-  if (period === 'short') {
-    query = query.where('work_duration', 'like', '%1주%');
-  } else if (period === 'medium') {
-    query = query.where('work_duration', 'like', '%1개월%');
-  }
-
-  // 3. 포함 키워드
-  const includeStr = typeof resolvedParams.include === 'string' ? resolvedParams.include : null;
-  if (includeStr) {
-    const keywords = includeStr.split(',').map(x => x.trim()).filter(Boolean);
+  // 전체 개수 카운트를 위한 별도 쿼리
+  let countQuery = db.selectFrom('jobs').select((eb) => eb.fn.count('id').as('count')).where('is_safe', '=', true);
+  
+  if (duration === 'short') countQuery = countQuery.where('work_duration', 'like', '%1주%');
+  else if (duration === 'medium') countQuery = countQuery.where('work_duration', 'like', '%1개월%');
+  
+  if (include) {
+    const keywords = include.split(',').map(x => x.trim()).filter(Boolean);
     for (const kw of keywords) {
-      query = query.where((eb) => eb.or([
-        eb('title', 'like', `%${kw}%`),
-        eb('company_name', 'like', `%${kw}%`)
-      ]));
+      countQuery = countQuery.where((eb) => eb.or([ eb('title', 'like', `%${kw}%`), eb('company_name', 'like', `%${kw}%`) ]));
     }
   }
-
-  // 4. 제외 키워드
-  const excludeStr = typeof resolvedParams.exclude === 'string' ? resolvedParams.exclude : null;
-  if (excludeStr) {
-    const keywords = excludeStr.split(',').map(x => x.trim()).filter(Boolean);
+  
+  if (exclude) {
+    const keywords = exclude.split(',').map(x => x.trim()).filter(Boolean);
     for (const kw of keywords) {
-      query = query.where('title', 'not like', `%${kw}%`);
-      query = query.where('company_name', 'not like', `%${kw}%`);
+      countQuery = countQuery.where('title', 'not like', `%${kw}%`);
+      countQuery = countQuery.where('company_name', 'not like', `%${kw}%`);
     }
   }
+  
+  if (min_hours === '40') countQuery = countQuery.where('weekly_work_hours', '>=', 40);
 
-  // 5. 주 40시간 이상
-  if (resolvedParams.min_hours === '40') {
-    query = query.where('weekly_work_hours', '>=', 40);
-  }
-
-  const jobs = await query.execute();
+  const countResult = await countQuery.executeTakeFirst();
+  const totalCount = countResult?.count ? Number(countResult.count) : 0;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans pb-20">
-      {/* 헤더 */}
       <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -92,36 +86,30 @@ export default async function Home({ searchParams }: SearchParamsProps) {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* 필터 */}
         <TagFilter />
 
-        {/* 공고 목록 */}
         <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             선별된 공고
             <span className="text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 rounded-full text-sm font-bold">
-              {jobs.length}건
+              {totalCount.toLocaleString()}건
             </span>
           </h2>
           <span className="text-xs text-zinc-400">3.3% 및 위험 공고 제외됨</span>
         </div>
 
-        {jobs.length === 0 ? (
+        {initialJobs.length === 0 ? (
           <div className="py-24 flex flex-col items-center justify-center text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white/50 dark:bg-zinc-900/50">
             <ShieldCheck className="w-10 h-10 text-zinc-300 mb-3" />
             <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-              아직 수집된 공고가 없습니다.
+              조건에 맞는 수집된 공고가 없습니다.
             </p>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm">
-              매일 새벽 3시에 자동으로 공고를 업데이트합니다.
+              필터 조건을 변경해보세요.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
+          <JobInfiniteList initialJobs={initialJobs} searchParams={actionParams} />
         )}
       </main>
     </div>
