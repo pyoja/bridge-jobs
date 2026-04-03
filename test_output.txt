@@ -1,0 +1,118 @@
+﻿怨듦퀬 ?? 50
+--- 泥?踰덉㎏ 怨듦퀬 ?꾩껜 ---
+{
+  "pageNo": 1,
+  "pageIndex": 0,
+  "no": 1,
+  "paidService": {
+    "useWanted": false,
+    "useMobilePick": false,
+    "useMobileIcon": true,
+    "useMobileCompanyNameColor": false,
+    "useMobileText": false,
+    "mobileText": "",
+    "useMobileHighlightText": false,
+    "mobileHighlightText": "",
+    "usePcHighlighter": false,
+    "pcTwinkleIconCode": "00",
+    "pcTwinkleIconText": "",
+    "usePcTwinkleColor": false,
+    "useAlbamonZ": false,
+    "totalProductCount": 2
+  },
+  "recruitSourceType": {
+    "key": "ALBAMON",
+    "value": "ALBAMON",
+    "description": "?뚮컮紐?
+  },
+  "recruitType": {
+    "key": "NORMAL",
+    "value": "NORMAL",
+    "description": "?쇰컲 怨듦퀬"
+  },
+  "recruitNo": 115734176,
+  "jobkoreaRecruitNo": 0,
+  "recruitTitle": "[?좎큿?몃툕???5?쒓컙] 泥댄겕??寃吏꾩꽱??寃吏꾩떎 ?ъ썝 紐⑥쭛(?쒖슱??洹쇰Т)",
+  "postedDate": "8遺꾩쟾",
+  "postStatusType": {
+    "key": "POSTING",
+    "value": "1",
+    "description": "寃뚯젣以?
+  },
+  "companyName": "[?붿젮?ㅽ깭???좎큿?몃툕??ㅻ퀝??寃吏꾩꽱??,
+  "backgroundImageUrl": "",
+  "logoUrl": "",
+  "companyHomePageUrl": "",
+  "payType": {
+    "key": "MONTHLY_SALARY",
+    "value": "C000",
+    "description": "?붽툒"
+  },
+  "pay": "1,621,278??,
+  "payAddTypes": [],
+  "negoPay": false,
+  "workingTime": "08:30~14:00",
+  "workingPeriod": "1媛쒖썡~3媛쒖썡",
+  "negoWorkPeriod": false,
+  "workingWeek": "??湲?,
+  "workingDate": "",
+  "trainee": false,
+  "parts": [
+    "??닿났?먃룻뀒留덊뙆??,
+    "蹂댁븞쨌寃쎈퉬쨌寃쏀샇",
+    "CAD쨌CAM쨌?명뀒由ъ뼱?붿옄??
+  ],
+  "closingDate": "2026-04-07",
+  "closingDateWithDDay": "2026-04-07 (留덇컧??4?쇱쟾)",
+  "closingDDay": "D-4",
+  "age": "?곕졊臾닿?",
+  "latitude": 37.5571,
+  "longitude": 126.97363,
+  "existsMap": true,
+  "workplaceAddress": "?쒖슱 以묎뎄 ?듭씪濡?10 (?⑤?臾몃줈5媛, ?곗꽭??숆탳?몃툕??ㅻ퉴?? ?ъ뒪泥댄겕?낆쓽??寃吏꾩꽱??,
+  "workplaceArea": "?쒖슱 媛뺤꽌援??붽끝??,
+  "distanceToWorkplace": "",
+  "locationType": {
+    "key": "NONE",
+    "value": "",
+    "description": "?좏깮 ?덊븿"
+  },
+  "applicationTypes": [
+    {
+      "key": "ONLINE",
+      "value": "1",
+      "description": "?⑤씪?몄???
+    },
+    {
+      "key": "EMAIL",
+      "value": "2",
+      "description": "?대찓??吏??
+    }
+  ],
+  "managerPhoneNumber": "010-9575-9707",
+  "hashTags": [],
+  "skillTags": [],
+  "filterTotal": "媛곸쥌 寃쎌“湲??곗옱蹂댄뿕,嫄닿컯蹂댄뿕,洹쇰Т蹂?吏湲??댁씪洹쇰줈?섎떦,?硫닿렐臾??곗감,二쇨컙,?곗옣洹쇰줈?섎떦,?멸렐吏??슦?,怨좎슜蹂댄뿕,珥덈낫 媛???듦렐踰꾩뒪 ?댄뻾,援???곌툑,?숈쥌?낆쥌寃쎈젰,寃쎌“?닿????댁쭅湲?,
+  "featureTotal": "?쒖껌??寃쎈퉬,以묎뎄,?쒖슱,?쒖뿏?ㅼ뒪?쒗봽,?닿??쒕룄,?쒖슱???뚰쁽???닿?鍮?吏???쒖껌,?뚰쁽,?쒖뒪??蹂댁븞,?⑤?臾몃줈5媛,?몄쓽???붽툒,怨듯쑕???대Т,4?蹂댄뿕,媛곸쥌 湲곕뀗???좊Ъ,?ㅽ듃?뚰겕,?댁쭅湲??꾩쭅???좎씤",
+  "scraped": false,
+  "existsScrapMemo": false,
+  "scrapedDate": "2026-04-03",
+  "applicationStatusType": {
+    "key": "NONE",
+    "value": "",
+    "description": "吏???댁뿭 ?놁쓬"
+  },
+  "appliedApplicationType": [],
+  "appliedDate": null,
+  "postedByCurrentAuthMember": false,
+  "productStatisticsCode": "",
+  "reviewCount": 0,
+  "reviewStarPoint": 0,
+  "payAdvance": false,
+  "readyToWorkBenefit": false,
+  "externalRecruitSite": "",
+  "externalRecruitOriginKey": "",
+  "recruitStatus": 0,
+  "mobileManagerPhoneNumber": true,
+  "isCoupang": false
+}
