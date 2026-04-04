@@ -123,25 +123,43 @@ export default function AboutPage() {
           </p>
         </div>
 
-        {/* 수집 조건 */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+        {/* 수집 조건 (상세) */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 mt-8">
           <h2 className="font-bold text-zinc-800 dark:text-zinc-200 mb-4 flex items-center gap-2">
             <Filter className="w-4 h-4 text-blue-500" />
-            현재 수집 조건 (알바몬 기준)
+            플랫폼별 상세 크롤링 조건
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { icon: MapPin, label: "수집 지역", value: "서울 전체" },
-              { icon: Briefcase, label: "고용 형태", value: "계약직" },
-              { icon: Clock, label: "근무 기간", value: "1주~3개월" },
-              { icon: ShieldCheck, label: "추가 필터", value: "3.3% 제거" },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="bg-zinc-50 dark:bg-zinc-950 rounded-lg p-3 text-center">
-                <Icon className="w-4 h-4 text-blue-500 mx-auto mb-1.5" />
-                <div className="text-xs text-zinc-500 mb-0.5">{label}</div>
-                <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{value}</div>
-              </div>
-            ))}
+          <div className="space-y-6">
+            {/* 알바몬 */}
+            <div className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
+              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm">🔵 알바몬 (Albamon)</h3>
+              <ul className="list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1 ml-1">
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (파라미터: areas=I000)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 계약직 (파라미터: employmentTypes=CONTRACT)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">근무 기간:</span> 1주일~1개월, 1개월~3개월 (파라미터: workPeriodTypes=ONE_WEEK_TO_ONE_MONTH, ONE_MONTH_TO_THREE_MONTH)</li>
+              </ul>
+            </div>
+
+            {/* 알바천국 */}
+            <div className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
+              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm">🟡 알바천국 (Alba Heaven)</h3>
+              <ul className="list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1 ml-1">
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (파라미터: sidocd=02 등)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 계약직 (파라미터: hiretypecd=K03)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">근무 기간:</span> 1주일~1개월, 1개월~3개월 (파라미터: workperiodcd=H03, H04)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">복리후생:</span> 4대보험 관련 (파라미터: welfarecd=T01, T02, T03, T04)</li>
+              </ul>
+            </div>
+
+            {/* 잡코리아 */}
+            <div>
+              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm">🟢 잡코리아 (JobKorea)</h3>
+              <ul className="list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1 ml-1">
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">검색어:</span> 백엔드개발자, 프론트엔드개발자, 웹개발자 (파라미터: stext=백엔드개발자,프론트엔드개발자,웹개발자)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (파라미터: local=I000)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 파견직/계약직 등 (파라미터: jobtype=2,6)</li>
+              </ul>
+            </div>
           </div>
         </div>
 
