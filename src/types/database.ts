@@ -12,6 +12,8 @@ export interface JobsTable {
   work_hours: string | null;
   weekly_work_hours: number | null;
   location: string | null;
+  latitude: number | null;
+  longitude: number | null;
   wage_type: string | null;
   wage_amount: number | null;
   

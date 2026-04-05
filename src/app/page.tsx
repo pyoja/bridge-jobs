@@ -4,6 +4,7 @@ import { Briefcase, ShieldCheck, Info } from "lucide-react";
 import Link from "next/link";
 import { getJobs } from "@/actions/getJobs";
 import { JobInfiniteList } from "@/components/JobInfiniteList";
+import { LocationSearch } from "@/components/LocationSearch";
 
 export const revalidate = 60;
 
@@ -20,8 +21,10 @@ export default async function Home({ searchParams }: SearchParamsProps) {
   const min_hours = typeof resolvedParams.min_hours === 'string' ? resolvedParams.min_hours : undefined;
   const platform = typeof resolvedParams.platform === 'string' ? resolvedParams.platform : undefined;
   const areas = typeof resolvedParams.areas === 'string' ? resolvedParams.areas : undefined;
+  const lat = typeof resolvedParams.lat === 'string' ? parseFloat(resolvedParams.lat) : undefined;
+  const lng = typeof resolvedParams.lng === 'string' ? parseFloat(resolvedParams.lng) : undefined;
 
-  const actionParams = { platform, duration, include, exclude, min_hours, areas };
+  const actionParams = { platform, duration, include, exclude, min_hours, areas, lat, lng };
 
   const initialJobs = await getJobs({ ...actionParams, page: 1, limit: 15 });
 
@@ -88,6 +91,7 @@ export default async function Home({ searchParams }: SearchParamsProps) {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <LocationSearch />
         <TagFilter />
 
         <div className="flex items-center justify-between mb-4 px-1">

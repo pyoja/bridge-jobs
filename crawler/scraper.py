@@ -9,6 +9,7 @@ import re
 import json
 import time
 import random
+import urllib.parse
 import psycopg2
 from psycopg2.extras import execute_values
 from bs4 import BeautifulSoup
@@ -86,6 +87,42 @@ def get_headers(url=""):
         "Upgrade-Insecure-Requests": "1",
         "Referer": domain if domain else "https://www.google.com/"
     }
+
+# =============================================
+# 네이버 Geocoding
+# =============================================
+_geocode_cache = {}
+
+def get_coordinates(address: str):
+    if not address: return None, None
+    if address in _geocode_cache:
+        return _geocode_cache[address]
+    
+    client_id = os.environ.get("NAVER_CLIENT_ID")
+    client_secret = os.environ.get("NAVER_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        return None, None
+        
+    req_url = f"https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query={urllib.parse.quote(address)}"
+    headers = {
+        "X-NCP-APIGW-API-KEY-ID": client_id,
+        "X-NCP-APIGW-API-KEY": client_secret
+    }
+    try:
+        import urllib.request
+        req = urllib.request.Request(req_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            if data.get("addresses") and len(data["addresses"]) > 0:
+                lat = float(data["addresses"][0]["y"])
+                lng = float(data["addresses"][0]["x"])
+                _geocode_cache[address] = (lat, lng)
+                return lat, lng
+    except Exception as e:
+        print(f"⚠️ Geocoding Error ({address}): {e}")
+    
+    _geocode_cache[address] = (None, None)
+    return None, None
 
 # =============================================
 # 유틸리티 함수
@@ -234,6 +271,7 @@ def crawl_albamon() -> list:
                     is_safe, warnings = analyze_job_safety(title + " " + company)
                     full_text = title + " " + company + " " + working_period
                     job_score, matched_kws = calculate_score(full_text)
+                    lat, lng = get_coordinates(workplace_area)
                     
                     tags = ["#계약직", "#고용보험가입"]
                     if weekly_hours >= 40: tags.append("#주40시간이상")
@@ -249,6 +287,8 @@ def crawl_albamon() -> list:
                         "work_hours": working_time,
                         "weekly_work_hours": weekly_hours,
                         "location": workplace_area,
+                        "latitude": lat,
+                        "longitude": lng,
                         "wage_type": normalize_wage_type(pay_type_key),
                         "wage_amount": normalize_wage(pay_raw),
                         "has_employment_insurance": True,
@@ -356,6 +396,7 @@ def crawl_alba_heaven() -> list:
                 is_safe, warnings = analyze_job_safety(title + " " + company)
                 full_text = title + " " + company + " " + working_period
                 job_score, matched_kws = calculate_score(full_text)
+                lat, lng = get_coordinates(workplace_area)
                 
                 tags = ["#계약직", "#고용보험가입"]
                 if weekly_hours >= 40: tags.append("#주40시간이상")
@@ -371,6 +412,8 @@ def crawl_alba_heaven() -> list:
                     "work_hours": working_time,
                     "weekly_work_hours": weekly_hours,
                     "location": workplace_area,
+                    "latitude": lat,
+                    "longitude": lng,
                     "wage_type": normalize_wage_type(pay_type_key),
                     "wage_amount": normalize_wage(pay_raw),
                     "has_employment_insurance": True,
@@ -450,6 +493,7 @@ def crawl_jobkorea() -> list:
                 is_safe, warnings = analyze_job_safety(title + " " + company)
                 full_text = title + " " + company
                 job_score, matched_kws = calculate_score(full_text)
+                lat, lng = get_coordinates(location)
                 
                 tags = ["#계약직/아르바이트", "#IT개발"]
                 wage_type = "협의"
@@ -465,6 +509,8 @@ def crawl_jobkorea() -> list:
                     "work_hours": "",
                     "weekly_work_hours": 0,
                     "location": location,
+                    "latitude": lat,
+                    "longitude": lng,
                     "wage_type": wage_type,
                     "wage_amount": wage_amount,
                     "has_employment_insurance": True,
@@ -531,7 +577,8 @@ def upsert_jobs(jobs: list):
                 j.get("wage_type", "시급"), j.get("wage_amount", 0),
                 j.get("has_employment_insurance", True), j.get("is_contract_worker", True),
                 j.get("is_safe", True), j.get("warning_tags", []), j.get("tags", []),
-                j.get("score", 0), j.get("matched_keywords", [])
+                j.get("score", 0), j.get("matched_keywords", []),
+                j.get("latitude"), j.get("longitude")
             )
             for j in jobs
         ]
@@ -544,7 +591,7 @@ def upsert_jobs(jobs: list):
                 wage_type, wage_amount,
                 has_employment_insurance, is_contract_worker,
                 is_safe, warning_tags, tags,
-                score, matched_keywords
+                score, matched_keywords, latitude, longitude
             ) VALUES %s
             ON CONFLICT (original_url) DO UPDATE SET
                 title = EXCLUDED.title,
@@ -557,7 +604,9 @@ def upsert_jobs(jobs: list):
                 warning_tags = EXCLUDED.warning_tags,
                 tags = EXCLUDED.tags,
                 score = EXCLUDED.score,
-                matched_keywords = EXCLUDED.matched_keywords
+                matched_keywords = EXCLUDED.matched_keywords,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude
         """, records)
         
         conn.commit()

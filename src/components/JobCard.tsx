@@ -3,11 +3,13 @@
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Clock, CalendarDays, Building2, Heart, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Selectable } from 'kysely';
 import { JobsTable } from '@/types/database';
 import { useJobPreferences } from '@/hooks/useJobPreferences';
+import { Map } from 'lucide-react';
 
-export type JobType = Selectable<JobsTable>;
+export type JobType = Selectable<JobsTable> & { distance_km?: number };
 
 // matched_keywords 배열 파싱 및 배지 렌더링 헬퍼
 type KeywordGrade = 'S' | 'A' | 'B' | 'BL';
@@ -38,6 +40,16 @@ const GRADE_STYLE: Record<KeywordGrade, { bg: string; text: string; label: strin
 
 export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?: boolean }) {
   const { toggleFavorite, hideJob, isFavorite, isHidden, loaded } = useJobPreferences();
+  const [userPos, setUserPos] = useState<{ lat: string; lng: string; addr: string } | null>(null);
+
+  useEffect(() => {
+    const lat = localStorage.getItem("bridge_lat");
+    const lng = localStorage.getItem("bridge_lng");
+    const addr = localStorage.getItem("bridge_addr");
+    if (lat && lng && addr) {
+      setUserPos({ lat, lng, addr });
+    }
+  }, []);
 
   const formatWage = (amount: number | null) => {
     if (!amount) return '회사내규에 따름';
@@ -46,6 +58,13 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
 
   // 숨겨진 공고 또는 즐겨찾기한 공고는 메인 목록에서 제외 (보관함에서만 볼 수 있음)
   if (!showHidden && loaded && (isHidden(job.original_url) || isFavorite(job.original_url))) return null;
+
+  const getDirectionsUrl = () => {
+    if (!userPos || !job.latitude || !job.longitude) return null;
+    return `https://map.naver.com/p/directions/${userPos.lat},${userPos.lng},${encodeURIComponent(userPos.addr)}/${job.latitude},${job.longitude},${encodeURIComponent(job.company_name || '근무지')}/-/transit?c=15,0,0,0,dh`;
+  };
+
+  const mapUrl = getDirectionsUrl();
 
   const fav = loaded && isFavorite(job.original_url);
 
@@ -158,7 +177,12 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span className="truncate">{job.location}</span>
+            <span className="truncate flex-1">{job.location}</span>
+            {job.distance_km != null && job.distance_km < 9999 && (
+              <span className="shrink-0 text-[11px] font-bold px-1.5 py-0.5 text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40 rounded shadow-sm whitespace-nowrap ml-1">
+                📍 {job.distance_km.toFixed(1)}km
+              </span>
+            )}
           </div>
         )}
         <div className="flex items-center text-zinc-600 dark:text-zinc-400">
@@ -195,7 +219,18 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
         )}
       </CardContent>
 
-      <CardFooter className="pt-2 pb-4 mt-auto">
+      <CardFooter className="pt-2 pb-4 mt-auto flex flex-col gap-2">
+        {mapUrl && (
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 rounded-lg text-sm font-semibold py-2.5 px-4 transition-colors bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-100 dark:border-blue-900/40"
+          >
+            <Map className="w-3.5 h-3.5" />
+            대중교통 길찾기 (거리: {job.distance_km?.toFixed(1)}km)
+          </a>
+        )}
         <a
           href={job.original_url}
           target="_blank"
@@ -203,10 +238,10 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
           className={`w-full flex items-center justify-center gap-2 rounded-lg text-sm font-semibold py-2.5 px-4 transition-colors ${
             hasPositiveScore 
               ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200 dark:shadow-none' 
-              : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-black text-white'
+              : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-black text-white'
           }`}
         >
-          공고 원문 보기
+          원문 공고 확인
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </CardFooter>

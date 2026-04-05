@@ -11,6 +11,8 @@ export type GetJobsParams = {
   exclude?: string;
   min_hours?: string;
   areas?: string;   // 쉼표 구분 구 이름 (예: "마포구,영등포구")
+  lat?: number;
+  lng?: number;
   page?: number;
   limit?: number;
 };
@@ -23,6 +25,8 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobType[]> {
     exclude,
     min_hours,
     areas,
+    lat,
+    lng,
     page = 1,
     limit = 15,
   } = params;
@@ -76,10 +80,6 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobType[]> {
     query = query.where('weekly_work_hours', '>=', 40);
   }
 
-  // 정렬 우선순위:
-  // 1순위: score DESC — 가중치 높은 공고 최상단 (플랫폼 무관)
-  // 2순위: 플랫폼 순서 (알바몬=1 → 알바천국=2 → 잡코리아=3) — score=0인 일반 공고용
-  // 3순위: created_at DESC
   const platformOrder = sql<number>`
     CASE platform
       WHEN '알바몬' THEN 1
@@ -89,10 +89,32 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobType[]> {
     END
   `;
 
-  query = query
-    .orderBy('score', 'desc')
-    .orderBy(platformOrder, 'asc')
-    .orderBy('created_at', 'desc');
+  if (lat && lng) {
+    // DB의 값이 null일 수 있으므로 COALESCE 사용
+    const distanceExpr = sql<number>`
+      COALESCE(
+        6371 * acos(
+          cos(radians(${lat})) * cos(radians(latitude)) * cos(radians(longitude) - radians(${lng})) +
+          sin(radians(${lat})) * sin(radians(latitude))
+        ),
+        9999 -- 위치 정보가 없는 공고는 후순위로 밀림
+      )
+    `;
+    
+    // as any 사용 이유는 동적 select 확장에 따른 타입 변환 문제 회피
+    query = query.select(distanceExpr.as('distance_km')) as any;
+
+    query = query
+      .orderBy('score', 'desc')
+      .orderBy(distanceExpr, 'asc') // 위치 검색 시 2순위: 거리순
+      .orderBy(platformOrder, 'asc')
+      .orderBy('created_at', 'desc');
+  } else {
+    query = query
+      .orderBy('score', 'desc')
+      .orderBy(platformOrder, 'asc') // 위치 검색이 없을 때 2순위: 플랫폼순
+      .orderBy('created_at', 'desc');
+  }
 
   const offset = (page - 1) * limit;
   query = query.limit(limit).offset(offset);
