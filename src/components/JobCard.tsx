@@ -44,16 +44,23 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
     return amount.toLocaleString() + '원';
   };
 
-  // 숨겨진 공고는 본 화면에서는 렌더링하지 않음
-  if (!showHidden && loaded && isHidden(job.original_url)) return null;
+  // 숨겨진 공고 또는 즐겨찾기한 공고는 메인 목록에서 제외 (보관함에서만 볼 수 있음)
+  if (!showHidden && loaded && (isHidden(job.original_url) || isFavorite(job.original_url))) return null;
 
   const fav = loaded && isFavorite(job.original_url);
 
   const parsedKeywords = parseMatchedKeywords(job.matched_keywords ?? []);
   const hasBlacklist = parsedKeywords.some((k) => k.grade === 'BL');
+  const hasPositiveScore = (job.score ?? 0) > 0;
 
   return (
-    <Card className={`hover:shadow-md transition-shadow group border-zinc-200 dark:border-zinc-800 flex flex-col h-full relative ${hasBlacklist ? 'opacity-70' : ''}`}>
+    <Card className={`hover:shadow-md transition-shadow group flex flex-col h-full relative ${
+      hasBlacklist 
+        ? 'opacity-70 border-red-200 dark:border-red-900/30 bg-white dark:bg-zinc-950' 
+        : hasPositiveScore
+          ? 'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm shadow-emerald-100/50 dark:shadow-emerald-900/20'
+          : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
+    }`}>
       {/* 즐겨찾기 + 숨기기 버튼 */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
         <button
@@ -62,7 +69,9 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
           className={`p-1.5 rounded-full transition-all ${
             fav
               ? "bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400"
-              : "bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-400 dark:bg-zinc-800 dark:hover:bg-red-900/40"
+              : hasPositiveScore
+                ? "bg-white/80 text-zinc-400 hover:bg-red-100 hover:text-red-400 dark:bg-black/50 dark:hover:bg-red-900/40 border border-emerald-100 dark:border-emerald-900/30"
+                : "bg-zinc-100 text-zinc-400 hover:bg-red-100 hover:text-red-400 dark:bg-zinc-800 dark:hover:bg-red-900/40"
           }`}
         >
           <Heart className={`w-3.5 h-3.5 ${fav ? "fill-current" : ""}`} />
@@ -70,13 +79,21 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
         <button
           onClick={() => hideJob(job.original_url)}
           title="이 공고 숨기기"
-          className="p-1.5 rounded-full bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all"
+          className={`p-1.5 rounded-full transition-all ${
+            hasPositiveScore
+              ? "bg-white/80 text-zinc-400 hover:bg-emerald-100 hover:text-emerald-700 dark:bg-black/50 dark:hover:bg-emerald-900/40 border border-emerald-100 dark:border-emerald-900/30"
+              : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          }`}
         >
           <EyeOff className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50 pr-20">
+      <CardHeader className={`pb-3 border-b pr-20 ${
+        hasPositiveScore 
+          ? 'border-emerald-100 dark:border-emerald-900/30 bg-emerald-100/30 dark:bg-emerald-900/10' 
+          : 'border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50'
+      }`}>
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           <Badge
             variant="secondary"
@@ -93,17 +110,17 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
             {job.platform ?? '알바몬'}
           </Badge>
           {job.has_employment_insurance && (
-            <Badge className="bg-blue-600 text-white text-xs">고용보험 O</Badge>
+            <Badge className="bg-blue-600 text-white text-xs shadow-sm">고용보험 O</Badge>
           )}
           {/* 점수 배지 */}
-          {(job.score ?? 0) > 0 && (
-            <Badge className="bg-emerald-600 text-white text-xs font-bold">
-              +{job.score}점
+          {hasPositiveScore && (
+            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-sm shadow-emerald-200 dark:shadow-none animate-in fade-in zoom-in duration-300">
+              ✨ 가중치 +{job.score}점
             </Badge>
           )}
           {(job.score ?? 0) < 0 && (
-            <Badge className="bg-red-500 text-white text-xs font-bold">
-              {job.score}점
+            <Badge className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-sm">
+              🚨 위험 {job.score}점
             </Badge>
           )}
         </div>
@@ -117,15 +134,15 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
 
         {/* 매칭 키워드 배지 */}
         {parsedKeywords.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
+          <div className="flex flex-wrap gap-1 mt-2.5">
             {parsedKeywords.map((kw, idx) => {
               const style = GRADE_STYLE[kw.grade];
               return (
                 <span
                   key={idx}
-                  className={`inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}
+                  className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md font-bold ${style.bg} ${style.text} border border-white/20 dark:border-black/20`}
                 >
-                  <span className="opacity-70 text-[10px]">{style.label}</span>
+                  <span className="opacity-80 text-[10px] tracking-tight">{style.label}</span>
                   {kw.keyword}
                 </span>
               );
@@ -155,7 +172,7 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
 
         {/* 급여 */}
         <div className="flex items-center gap-2 pt-2 border-t border-dashed border-zinc-200 dark:border-zinc-800 mt-1">
-          <Badge variant="outline" className="text-xs border-zinc-300 dark:border-zinc-700 shrink-0">
+          <Badge variant="outline" className="text-xs border-zinc-300 dark:border-zinc-700 shrink-0 bg-transparent">
             {job.wage_type || '급여'}
           </Badge>
           <span className="font-bold text-zinc-900 dark:text-zinc-100">{formatWage(job.wage_amount)}</span>
@@ -163,10 +180,14 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
 
         {/* 태그 */}
         {job.tags && job.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-1">
+          <div className="flex flex-wrap gap-1.5 mt-2">
             {job.tags.map((tag, idx) => (
               <Badge key={idx} variant="secondary"
-                className="bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 font-normal text-xs rounded-md">
+                className={`font-normal text-[11px] rounded transition-colors ${
+                  hasPositiveScore 
+                    ? 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 hover:bg-emerald-200/50' 
+                    : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+                }`}>
                 {tag}
               </Badge>
             ))}
@@ -179,7 +200,11 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
           href={job.original_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-black text-white text-sm font-semibold py-2.5 px-4 transition-colors"
+          className={`w-full flex items-center justify-center gap-2 rounded-lg text-sm font-semibold py-2.5 px-4 transition-colors ${
+            hasPositiveScore 
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200 dark:shadow-none' 
+              : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-black text-white'
+          }`}
         >
           공고 원문 보기
           <ExternalLink className="w-3.5 h-3.5" />

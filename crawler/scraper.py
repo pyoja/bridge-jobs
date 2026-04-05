@@ -8,6 +8,7 @@ import os
 import re
 import json
 import time
+import random
 import psycopg2
 from psycopg2.extras import execute_values
 from bs4 import BeautifulSoup
@@ -59,17 +60,32 @@ BLACKLIST_KEYWORDS = {
     '건별 지급': -100, '인센티브제': -100, '실적급': -100, '전액 수수료': -100,
 }
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-}
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
+]
+
+def get_headers(url=""):
+    domain = ""
+    if "albamon.com" in url: domain = "https://www.albamon.com"
+    elif "alba.co.kr" in url: domain = "https://www.alba.co.kr"
+    elif "jobkorea.co.kr" in url: domain = "https://www.jobkorea.co.kr"
+    
+    return {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none" if not domain else "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Referer": domain if domain else "https://www.google.com/"
+    }
 
 # =============================================
 # 유틸리티 함수
@@ -147,13 +163,16 @@ def normalize_wage_type(pay_type_key: str) -> str:
     return mapping.get(pay_type_key, "협의")
 
 def fetch_html(url: str) -> str:
+    headers = get_headers(url)
     if requests:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
+        # User-Agent에 requests 식별이 남지 않도록 명시적 세션 사용 (의사)
+        session = requests.Session()
+        resp = session.get(url, headers=headers, timeout=15)
         resp.raise_for_status()
         return resp.text
     else:
         import urllib.request
-        req = urllib.request.Request(url, headers=HEADERS)
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as res:
             return res.read().decode("utf-8")
 
@@ -247,9 +266,9 @@ def crawl_albamon() -> list:
             print(f"📄 [알바몬] {page_num}페이지: ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
             
             page_num += 1
-            if page_num > 100: # 무한루프 방지 (최대 5000개 수집)
+            if page_num > 10: # 무한루프 및 밴 방지 (10페이지로 제한)
                 break
-            time.sleep(1.5)
+            time.sleep(random.uniform(2.5, 4.5))
             
         except Exception as e:
             print(f"   ❌ [알바몬] {page_num}페이지 에러: {e}")
@@ -371,9 +390,9 @@ def crawl_alba_heaven() -> list:
             print(f"📄 [알바천국] {page_num}페이지: ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
             
             page_num += 1
-            if page_num > 100: # 무한루프 방지
+            if page_num > 10: # 무한루프 및 밴 방지
                 break
-            time.sleep(1.5)
+            time.sleep(random.uniform(2.5, 4.5))
             
         except Exception as e:
             print(f"   ❌ [알바천국] {page_num}페이지 에러: {e}")
@@ -461,8 +480,8 @@ def crawl_jobkorea() -> list:
             print(f"📄 [잡코리아] {page_num}페이지: ✅ {len(page_jobs)}개 수집 (누적: {len(all_jobs)}개)")
             
             page_num += 1
-            if page_num > 100: break
-            time.sleep(1.5)
+            if page_num > 10: break
+            time.sleep(random.uniform(2.5, 4.5))
             
         except Exception as e:
             print(f"   ❌ [잡코리아] {page_num}페이지 에러: {e}")

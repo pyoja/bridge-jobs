@@ -132,34 +132,99 @@ export default function AboutPage() {
           <div className="space-y-6">
             {/* 알바몬 */}
             <div className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
-              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm">🔵 알바몬 (Albamon)</h3>
+              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-orange-400"></span>
+                알바몬 (Albamon)
+              </h3>
               <ul className="list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1 ml-1">
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (파라미터: areas=I000)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 계약직 (파라미터: employmentTypes=CONTRACT)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">근무 기간:</span> 1주일~1개월, 1개월~3개월 (파라미터: workPeriodTypes=ONE_WEEK_TO_ONE_MONTH, ONE_MONTH_TO_THREE_MONTH)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (areas=I000)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 계약직 (employmentTypes=CONTRACT)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">근무 기간:</span> 1주일~1개월, 1개월~3개월 (workPeriodTypes=ONE_WEEK_TO_ONE_MONTH, ONE_MONTH_TO_THREE_MONTH)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">수집 범위:</span> 최대 10페이지 (약 500건)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">요청 간격:</span> 2.5~4.5초 랜덤 딜레이 (봇 차단 방지)</li>
               </ul>
             </div>
 
             {/* 알바천국 */}
             <div className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
-              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm">🟡 알바천국 (Alba Heaven)</h3>
+              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
+                알바천국 (Alba.co.kr)
+              </h3>
               <ul className="list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1 ml-1">
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (파라미터: sidocd=02 등)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 계약직 (파라미터: hiretypecd=K03)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">근무 기간:</span> 1주일~1개월, 1개월~3개월 (파라미터: workperiodcd=H03, H04)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">복리후생:</span> 4대보험 관련 (파라미터: welfarecd=T01, T02, T03, T04)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (sidocd=02)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 계약직 (hiretypecd=K03)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">근무 기간:</span> 1주일~1개월, 1개월~3개월 (workperiodcd=H03, H04)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">복리후생:</span> 4대보험 관련 항목 포함 (welfarecd=T01,T02,T03,T04)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">수집 범위:</span> 최대 10페이지 (약 500건)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">요청 간격:</span> 2.5~4.5초 랜덤 딜레이 (봇 차단 방지)</li>
               </ul>
             </div>
 
             {/* 잡코리아 */}
             <div>
-              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm">🟢 잡코리아 (JobKorea)</h3>
+              <h3 className="font-semibold text-zinc-800 dark:text-zinc-200 mb-2 text-sm flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-purple-400"></span>
+                잡코리아 (JobKorea)
+              </h3>
               <ul className="list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1 ml-1">
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">검색어:</span> 백엔드개발자, 프론트엔드개발자, 웹개발자 (파라미터: stext=백엔드개발자,프론트엔드개발자,웹개발자)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (파라미터: local=I000)</li>
-                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 파견직/계약직 등 (파라미터: jobtype=2,6)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">검색어:</span> 백엔드개발자, 프론트엔드개발자, 웹개발자</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">지역:</span> 서울 전체 (local=I000)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">고용 형태:</span> 파견직/계약직 (jobtype=2,6)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">수집 범위:</span> 최대 10페이지 (약 100건)</li>
+                <li><span className="font-medium text-zinc-700 dark:text-zinc-300">요청 간격:</span> 2.5~4.5초 랜덤 딜레이 (봇 차단 방지)</li>
               </ul>
             </div>
+          </div>
+        </div>
+
+        {/* 공고 표시 우선순위 */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 mt-4">
+          <h2 className="font-bold text-zinc-800 dark:text-zinc-200 mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-emerald-500" />
+            공고 표시 우선순위
+          </h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
+            수집된 공고는 단순히 플랫폼 순서가 아닌, <strong className="text-zinc-700 dark:text-zinc-300">실업급여 수급 가능성을 기준으로 스코어링</strong>한 결과에 따라 정렬됩니다.
+          </p>
+          <ol className="space-y-3">
+            <li className="flex items-start gap-3">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">✨ 가중치 공고 (점수 &gt; 0점, 전체 플랫폼)</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  이직확인서, 실업급여, 실급, 상실신고, 고용보험, 4대보험, 기간제, 계약 등의 키워드가 포함된 공고.
+                  <br />S급 키워드 +50점 / A급 +20점 / B급 +10점이 부여되며, 점수 높은 순으로 최상단에 표시됩니다.
+                </p>
+              </div>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-orange-400 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">🔵 알바몬 일반 공고</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">가중치 키워드가 없는 알바몬 계약직 공고. 최신순으로 정렬됩니다.</p>
+              </div>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-yellow-400 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">🟡 알바천국 일반 공고</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">가중치 키워드가 없는 알바천국 계약직 공고. 최신순으로 정렬됩니다.</p>
+              </div>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-purple-400 text-white text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">🟣 잡코리아 일반 공고</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">가중치 키워드가 없는 잡코리아 계약직/파견직 공고. 개발 직군 중심으로 최신순 정렬됩니다.</p>
+              </div>
+            </li>
+          </ol>
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+            <p className="text-xs text-red-700 dark:text-red-400">
+              🚨 <strong>블랙리스트 키워드</strong> (3.3%, 사업소득, 프리랜서, 위촉직, 도급, 원천징수, 건별 지급, 인센티브제, 실적급, 전액 수수료)가 포함된 공고는
+              <strong> -100점</strong>으로 처리되어 최하단에 노출되며, is_safe=false로 판정된 경우 아예 표시되지 않습니다.
+            </p>
           </div>
         </div>
 

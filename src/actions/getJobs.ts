@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { JobType } from "@/components/JobCard";
+import { sql } from "kysely";
 
 export type GetJobsParams = {
   platform?: string;
@@ -75,8 +76,24 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobType[]> {
     query = query.where('weekly_work_hours', '>=', 40);
   }
 
-  // Pagination 적용: 점수 높은 순 → 최신순
-  query = query.orderBy('score', 'desc').orderBy('created_at', 'desc');
+  // 정렬 우선순위:
+  // 1순위: score DESC — 가중치 높은 공고 최상단 (플랫폼 무관)
+  // 2순위: 플랫폼 순서 (알바몬=1 → 알바천국=2 → 잡코리아=3) — score=0인 일반 공고용
+  // 3순위: created_at DESC
+  const platformOrder = sql<number>`
+    CASE platform
+      WHEN '알바몬' THEN 1
+      WHEN '알바천국' THEN 2
+      WHEN '잡코리아' THEN 3
+      ELSE 4
+    END
+  `;
+
+  query = query
+    .orderBy('score', 'desc')
+    .orderBy(platformOrder, 'asc')
+    .orderBy('created_at', 'desc');
+
   const offset = (page - 1) * limit;
   query = query.limit(limit).offset(offset);
 
