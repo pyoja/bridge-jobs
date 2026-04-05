@@ -35,17 +35,21 @@ export function LocationSearch() {
     }
   }, [searchParams, router]);
 
+  const [tempSuccess, setTempSuccess] = useState("");
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!query.trim()) return;
 
     setLoading(true);
     setError("");
+    setTempSuccess("");
 
     try {
       const res = await geocodeAddress(query);
       if (res.error) {
         setError(res.error);
+        setLoading(false);
         return;
       }
 
@@ -54,18 +58,24 @@ export function LocationSearch() {
         localStorage.setItem("bridge_lng", res.lng.toString());
         localStorage.setItem("bridge_addr", res.roadAddress!);
 
-        const params = new URLSearchParams(searchParams?.toString());
-        params.set("lat", res.lat.toString());
-        params.set("lng", res.lng.toString());
-        params.set("addr", res.roadAddress!);
-        params.delete("page");
+        setTempSuccess(res.roadAddress!);
         
-        router.push(`/?${params.toString()}`);
-        setQuery("");
+        // 1.5초 대기하며 사용자에게 "✅ 기준 위치: ~" 뱃지를 보여준 후 목록 업데이트(라우팅) 수행
+        setTimeout(() => {
+          const params = new URLSearchParams(searchParams?.toString());
+          params.set("lat", res.lat.toString());
+          params.set("lng", res.lng.toString());
+          params.set("addr", res.roadAddress!);
+          params.delete("page");
+          
+          router.push(`/?${params.toString()}`);
+          setQuery("");
+          setLoading(false);
+          setTempSuccess("");
+        }, 1500);
       }
     } catch (err) {
       setError("검색 중 오류가 발생했습니다.");
-    } finally {
       setLoading(false);
     }
   };
@@ -116,7 +126,8 @@ export function LocationSearch() {
                 placeholder="동/읍/면 또는 도로명 주소를 입력하세요"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500"
+                disabled={loading}
+                className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 disabled:opacity-50"
               />
             </div>
             <button
@@ -124,10 +135,23 @@ export function LocationSearch() {
               disabled={loading || !query.trim()}
               className="px-6 bg-zinc-900 dark:bg-white text-white dark:text-black font-semibold rounded-xl text-sm disabled:opacity-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors flex items-center justify-center min-w-[72px]"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  <span>확인 중...</span>
+                </>
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
             </button>
           </div>
-          {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+          {error && <p className="text-red-500 text-xs font-semibold mt-2 px-1">{error}</p>}
+          {tempSuccess && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-bold rounded-lg border border-emerald-200 dark:border-emerald-800 max-w-full">
+              <span>✅ 기준 위치:</span>
+              <span className="truncate">{tempSuccess}</span>
+            </div>
+          )}
         </form>
       )}
     </div>
