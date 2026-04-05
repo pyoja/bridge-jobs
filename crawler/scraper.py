@@ -43,6 +43,7 @@ SCORE_S = {
 
 SCORE_A = {
     '단기 계약직': 20, '기간제': 20, '파견직': 20, '계약만료': 20, '근로계약서 작성': 20,
+    '계약': 20,
     '1개월': 20, '2개월': 20, '3개월': 20, '단기 알바': 20,
     '고용보험': 20, '4대보험': 20, '사대보험': 20,
 }
@@ -470,6 +471,26 @@ def crawl_jobkorea() -> list:
     return all_jobs
 
 # =============================================
+# DB 마이그레이션 (컬럼 자동 추가)
+# =============================================
+def ensure_columns(conn):
+    """score, matched_keywords 컬럼이 없으면 자동으로 추가합니다."""
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            ALTER TABLE jobs
+                ADD COLUMN IF NOT EXISTS score INTEGER NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS matched_keywords TEXT[] NOT NULL DEFAULT '{}';
+        """)
+        conn.commit()
+        print("✅ DB 컬럼 확인 완료 (score, matched_keywords)")
+    except Exception as e:
+        conn.rollback()
+        print(f"⚠️ 컬럼 마이그레이션 경고: {e}")
+    finally:
+        cur.close()
+
+# =============================================
 # DB 저장
 # =============================================
 def upsert_jobs(jobs: list):
@@ -479,6 +500,7 @@ def upsert_jobs(jobs: list):
     
     print(f"\n📦 총 {len(jobs)}개 공고를 DB에 저장 중...")
     conn = psycopg2.connect(DATABASE_URL)
+    ensure_columns(conn)  # 컬럼 자동 마이그레이션
     cur = conn.cursor()
     
     try:
