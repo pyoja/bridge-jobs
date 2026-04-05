@@ -30,6 +30,34 @@ DATABASE_URL = DATABASE_URL.replace("?pgbouncer=true", "").replace("&pgbouncer=t
 
 DANGER_KEYWORDS = ['3.3%', '사업소득', '프리랜서', '위촉직', '도급', '원천징수']
 
+# =============================================
+# 스코어링 키워드 정의
+# =============================================
+SCORE_S = {
+    '이직확인서': 50,
+    '이직확인서 발급': 50,
+    '실업급여': 50,
+    '실급': 50,
+    '상실신고': 50,
+}
+
+SCORE_A = {
+    '단기 계약직': 20, '기간제': 20, '파견직': 20, '계약만료': 20, '근로계약서 작성': 20,
+    '1개월': 20, '2개월': 20, '3개월': 20, '단기 알바': 20,
+    '고용보험': 20, '4대보험': 20, '사대보험': 20,
+}
+
+SCORE_B = {
+    '사무보조': 10, '데이터 라벨링': 10, '단순 포장': 10,
+    '재고조사': 10, '관공서 알바': 10, '공공근로': 10,
+}
+
+BLACKLIST_KEYWORDS = {
+    '3.3%': -100, '사업소득': -100, '원천징수': -100,
+    '프리랜서': -100, '위촉직': -100, '도급': -100,
+    '건별 지급': -100, '인센티브제': -100, '실적급': -100, '전액 수수료': -100,
+}
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -48,6 +76,39 @@ HEADERS = {
 def analyze_job_safety(text: str) -> tuple:
     found = [kw for kw in DANGER_KEYWORDS if kw in text]
     return len(found) == 0, found
+
+def calculate_score(text: str) -> tuple[int, list[str]]:
+    """텍스트에서 스코어링 키워드를 탐지하여 총점과 발견된 키워드 목록 반환.
+    matched_keywords 형식: 'S|이직확인서', 'A|고용보험', 'B|사무보조', 'BL|3.3%'
+    """
+    score = 0
+    matched = []
+
+    # 블랙리스트 먼저 확인 (블랙리스트 발견 시 즉시 대폭 감점)
+    for kw, pts in BLACKLIST_KEYWORDS.items():
+        if kw in text:
+            score += pts
+            matched.append(f'BL|{kw}')
+
+    # S급
+    for kw, pts in SCORE_S.items():
+        if kw in text and f'S|{kw}' not in matched:
+            score += pts
+            matched.append(f'S|{kw}')
+
+    # A급
+    for kw, pts in SCORE_A.items():
+        if kw in text and f'A|{kw}' not in matched:
+            score += pts
+            matched.append(f'A|{kw}')
+
+    # B급
+    for kw, pts in SCORE_B.items():
+        if kw in text and f'B|{kw}' not in matched:
+            score += pts
+            matched.append(f'B|{kw}')
+
+    return score, matched
 
 def calculate_weekly_hours(work_hours_str: str) -> int:
     if not work_hours_str or '협의' in work_hours_str:
@@ -151,6 +212,8 @@ def crawl_albamon() -> list:
                     job_url = f"https://www.albamon.com/jobs/detail/{recruit_no}"
                     weekly_hours = calculate_weekly_hours(working_time)
                     is_safe, warnings = analyze_job_safety(title + " " + company)
+                    full_text = title + " " + company + " " + working_period
+                    job_score, matched_kws = calculate_score(full_text)
                     
                     tags = ["#계약직", "#고용보험가입"]
                     if weekly_hours >= 40: tags.append("#주40시간이상")
@@ -172,7 +235,9 @@ def crawl_albamon() -> list:
                         "is_contract_worker": True,
                         "is_safe": is_safe,
                         "warning_tags": warnings,
-                        "tags": tags
+                        "tags": tags,
+                        "score": job_score,
+                        "matched_keywords": matched_kws,
                     })
                 except Exception:
                     continue
@@ -269,6 +334,8 @@ def crawl_alba_heaven() -> list:
                 found_valid = True
                 weekly_hours = calculate_weekly_hours(working_time)
                 is_safe, warnings = analyze_job_safety(title + " " + company)
+                full_text = title + " " + company + " " + working_period
+                job_score, matched_kws = calculate_score(full_text)
                 
                 tags = ["#계약직", "#고용보험가입"]
                 if weekly_hours >= 40: tags.append("#주40시간이상")
@@ -290,7 +357,9 @@ def crawl_alba_heaven() -> list:
                     "is_contract_worker": True,
                     "is_safe": is_safe,
                     "warning_tags": warnings,
-                    "tags": tags
+                    "tags": tags,
+                    "score": job_score,
+                    "matched_keywords": matched_kws,
                 })
                 
             if not found_valid:
@@ -359,6 +428,8 @@ def crawl_jobkorea() -> list:
                         break
                 
                 is_safe, warnings = analyze_job_safety(title + " " + company)
+                full_text = title + " " + company
+                job_score, matched_kws = calculate_score(full_text)
                 
                 tags = ["#계약직/아르바이트", "#IT개발"]
                 wage_type = "협의"
@@ -380,7 +451,9 @@ def crawl_jobkorea() -> list:
                     "is_contract_worker": True,
                     "is_safe": is_safe,
                     "warning_tags": warnings,
-                    "tags": tags
+                    "tags": tags,
+                    "score": job_score,
+                    "matched_keywords": matched_kws,
                 })
                 
             all_jobs.extend(page_jobs)
@@ -416,7 +489,8 @@ def upsert_jobs(jobs: list):
                 j.get("weekly_work_hours", 0), j.get("location", "서울"),
                 j.get("wage_type", "시급"), j.get("wage_amount", 0),
                 j.get("has_employment_insurance", True), j.get("is_contract_worker", True),
-                j.get("is_safe", True), j.get("warning_tags", []), j.get("tags", [])
+                j.get("is_safe", True), j.get("warning_tags", []), j.get("tags", []),
+                j.get("score", 0), j.get("matched_keywords", [])
             )
             for j in jobs
         ]
@@ -428,7 +502,8 @@ def upsert_jobs(jobs: list):
                 weekly_work_hours, location,
                 wage_type, wage_amount,
                 has_employment_insurance, is_contract_worker,
-                is_safe, warning_tags, tags
+                is_safe, warning_tags, tags,
+                score, matched_keywords
             ) VALUES %s
             ON CONFLICT (original_url) DO UPDATE SET
                 title = EXCLUDED.title,
@@ -439,7 +514,9 @@ def upsert_jobs(jobs: list):
                 wage_amount = EXCLUDED.wage_amount,
                 is_safe = EXCLUDED.is_safe,
                 warning_tags = EXCLUDED.warning_tags,
-                tags = EXCLUDED.tags
+                tags = EXCLUDED.tags,
+                score = EXCLUDED.score,
+                matched_keywords = EXCLUDED.matched_keywords
         """, records)
         
         conn.commit()

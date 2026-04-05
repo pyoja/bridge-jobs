@@ -9,6 +9,33 @@ import { useJobPreferences } from '@/hooks/useJobPreferences';
 
 export type JobType = Selectable<JobsTable>;
 
+// matched_keywords 배열 파싱 및 배지 렌더링 헬퍼
+type KeywordGrade = 'S' | 'A' | 'B' | 'BL';
+
+interface ParsedKeyword {
+  grade: KeywordGrade;
+  keyword: string;
+}
+
+function parseMatchedKeywords(matched: string[]): ParsedKeyword[] {
+  return matched
+    .map((item) => {
+      const sep = item.indexOf('|');
+      if (sep === -1) return null;
+      const grade = item.slice(0, sep) as KeywordGrade;
+      const keyword = item.slice(sep + 1);
+      return { grade, keyword };
+    })
+    .filter(Boolean) as ParsedKeyword[];
+}
+
+const GRADE_STYLE: Record<KeywordGrade, { bg: string; text: string; label: string }> = {
+  S: { bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300', label: 'S급' },
+  A: { bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-700 dark:text-yellow-300', label: 'A급' },
+  B: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-300', label: 'B급' },
+  BL: { bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-300', label: '⚠️' },
+};
+
 export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?: boolean }) {
   const { toggleFavorite, hideJob, isFavorite, isHidden, loaded } = useJobPreferences();
 
@@ -22,8 +49,11 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
 
   const fav = loaded && isFavorite(job.original_url);
 
+  const parsedKeywords = parseMatchedKeywords(job.matched_keywords ?? []);
+  const hasBlacklist = parsedKeywords.some((k) => k.grade === 'BL');
+
   return (
-    <Card className="hover:shadow-md transition-shadow group border-zinc-200 dark:border-zinc-800 flex flex-col h-full relative">
+    <Card className={`hover:shadow-md transition-shadow group border-zinc-200 dark:border-zinc-800 flex flex-col h-full relative ${hasBlacklist ? 'opacity-70' : ''}`}>
       {/* 즐겨찾기 + 숨기기 버튼 */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
         <button
@@ -65,6 +95,17 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
           {job.has_employment_insurance && (
             <Badge className="bg-blue-600 text-white text-xs">고용보험 O</Badge>
           )}
+          {/* 점수 배지 */}
+          {(job.score ?? 0) > 0 && (
+            <Badge className="bg-emerald-600 text-white text-xs font-bold">
+              +{job.score}점
+            </Badge>
+          )}
+          {(job.score ?? 0) < 0 && (
+            <Badge className="bg-red-500 text-white text-xs font-bold">
+              {job.score}점
+            </Badge>
+          )}
         </div>
         <CardTitle className="text-base sm:text-lg font-bold leading-snug group-hover:text-blue-600 transition-colors">
           {job.title}
@@ -73,6 +114,24 @@ export function JobCard({ job, showHidden = false }: { job: JobType, showHidden?
           <Building2 className="w-3.5 h-3.5 mr-1.5 mt-0.5 opacity-70 shrink-0" />
           <span className="leading-snug">{job.company_name}</span>
         </div>
+
+        {/* 매칭 키워드 배지 */}
+        {parsedKeywords.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {parsedKeywords.map((kw, idx) => {
+              const style = GRADE_STYLE[kw.grade];
+              return (
+                <span
+                  key={idx}
+                  className={`inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}
+                >
+                  <span className="opacity-70 text-[10px]">{style.label}</span>
+                  {kw.keyword}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="pt-4 pb-2 flex flex-col gap-2 text-sm flex-grow">

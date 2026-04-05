@@ -75,8 +75,8 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobType[]> {
     query = query.where('weekly_work_hours', '>=', 40);
   }
 
-  // Pagination 적용
-  query = query.orderBy('created_at', 'desc');
+  // Pagination 적용: 점수 높은 순 → 최신순
+  query = query.orderBy('score', 'desc').orderBy('created_at', 'desc');
   const offset = (page - 1) * limit;
   query = query.limit(limit).offset(offset);
 

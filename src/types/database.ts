@@ -25,6 +25,10 @@ export interface JobsTable {
   deadline_date: string | null;
   created_at: Generated<string>;
   updated_at: Generated<string>;
+
+  // 스코어링 시스템
+  score: Generated<number>;           // S/A/B급 점수 - 블랙리스트 감점 효과
+  matched_keywords: Generated<string[]>; // 'S|이직확인서', 'A|고용보험', 'BL|3.3%' 형식
 }
 
 export interface Database {
