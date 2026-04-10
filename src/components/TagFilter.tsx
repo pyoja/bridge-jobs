@@ -174,32 +174,66 @@ function FilterContent() {
   const [selectedAreas, setSelectedAreas] = useState<string[]>(
     searchParams.get('areas') ? searchParams.get('areas')!.split(',').filter(Boolean) : []
   );
-  const [include, setInclude] = useState(searchParams.get('include') || '');
-  const [exclude, setExclude] = useState(searchParams.get('exclude') || '');
+  
+  const [includeInput, setIncludeInput] = useState("");
+  const [includeTags, setIncludeTags] = useState<string[]>([]);
+  
+  const [excludeInput, setExcludeInput] = useState("");
+  const [excludeTags, setExcludeTags] = useState<string[]>([]);
+  
   const [workPeriod, setWorkPeriod] = useState<WorkPeriod>(
     (searchParams.get('period') as WorkPeriod) || 'all'
   );
   const [minHours, setMinHours] = useState(searchParams.get('min_hours') === '40');
 
+  useEffect(() => {
+    let incArr = JSON.parse(localStorage.getItem('bridge_includes') || '[]');
+    let excArr = JSON.parse(localStorage.getItem('bridge_excludes') || '[]');
+
+    const urlInc = searchParams.get('include');
+    if (urlInc) incArr = Array.from(new Set([...incArr, ...urlInc.split(',').filter(Boolean)]));
+    
+    const urlExc = searchParams.get('exclude');
+    if (urlExc) excArr = Array.from(new Set([...excArr, ...urlExc.split(',').filter(Boolean)]));
+
+    setIncludeTags(incArr);
+    setExcludeTags(excArr);
+
+    localStorage.setItem('bridge_includes', JSON.stringify(incArr));
+    localStorage.setItem('bridge_excludes', JSON.stringify(excArr));
+
+    if ((incArr.length > 0 && !urlInc) || (excArr.length > 0 && !urlExc)) {
+       applyFilter({ include: incArr, exclude: excArr }, true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const applyFilter = (overrides?: Partial<{
-    platform: string; areas: string[]; include: string; exclude: string;
+    platform: string; areas: string[]; include: string[]; exclude: string[];
     workPeriod: WorkPeriod; minHours: boolean;
-  }>) => {
+  }>, replace = false) => {
     const pf = overrides?.platform ?? platform;
     const ar = overrides?.areas ?? selectedAreas;
-    const inc = overrides?.include ?? include;
-    const exc = overrides?.exclude ?? exclude;
+    const inc = overrides?.include ?? includeTags;
+    const exc = overrides?.exclude ?? excludeTags;
     const wp = overrides?.workPeriod ?? workPeriod;
     const mh = overrides?.minHours ?? minHours;
 
-    const params = new URLSearchParams();
-    if (pf && pf !== 'all') params.set('platform', pf);
-    if (ar.length > 0) params.set('areas', ar.join(','));
-    if (inc.trim()) params.set('include', inc.trim());
-    if (exc.trim()) params.set('exclude', exc.trim());
-    if (wp !== 'all') params.set('period', wp);
-    if (mh) params.set('min_hours', '40');
-    router.push(`/?${params.toString()}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('page'); // 필터 변경 시 무조건 1페이지로
+    
+    if (pf && pf !== 'all') params.set('platform', pf); else params.delete('platform');
+    if (ar.length > 0) params.set('areas', ar.join(',')); else params.delete('areas');
+    if (inc.length > 0) params.set('include', inc.join(',')); else params.delete('include');
+    if (exc.length > 0) params.set('exclude', exc.join(',')); else params.delete('exclude');
+    if (wp !== 'all') params.set('period', wp); else params.delete('period');
+    if (mh) params.set('min_hours', '40'); else params.delete('min_hours');
+
+    if (replace) {
+      router.replace(`/?${params.toString()}`);
+    } else {
+      router.push(`/?${params.toString()}`);
+    }
   };
 
   const handleAreasChange = (areas: string[]) => {
@@ -210,11 +244,69 @@ function FilterContent() {
   const resetAll = () => {
     setPlatform('all');
     setSelectedAreas([]);
-    setInclude('');
-    setExclude('');
+    setIncludeTags([]);
+    setExcludeTags([]);
+    setIncludeInput('');
+    setExcludeInput('');
     setWorkPeriod('all');
     setMinHours(false);
+    localStorage.removeItem('bridge_includes');
+    localStorage.removeItem('bridge_excludes');
     router.push('/');
+  };
+
+  const handleAddInclude = () => {
+    if (!includeInput.trim()) return;
+    const newTags = Array.from(new Set([...includeTags, includeInput.trim()]));
+    setIncludeTags(newTags);
+    setIncludeInput('');
+    localStorage.setItem('bridge_includes', JSON.stringify(newTags));
+    applyFilter({ include: newTags });
+  };
+
+  const handleRemoveInclude = (tag: string) => {
+    const newTags = includeTags.filter(t => t !== tag);
+    setIncludeTags(newTags);
+    localStorage.setItem('bridge_includes', JSON.stringify(newTags));
+    applyFilter({ include: newTags });
+  };
+
+  const handleAddExclude = () => {
+    if (!excludeInput.trim()) return;
+    const newTags = Array.from(new Set([...excludeTags, excludeInput.trim()]));
+    setExcludeTags(newTags);
+    setExcludeInput('');
+    localStorage.setItem('bridge_excludes', JSON.stringify(newTags));
+    applyFilter({ exclude: newTags });
+  };
+
+  const handleRemoveExclude = (tag: string) => {
+    const newTags = excludeTags.filter(t => t !== tag);
+    setExcludeTags(newTags);
+    localStorage.setItem('bridge_excludes', JSON.stringify(newTags));
+    applyFilter({ exclude: newTags });
+  };
+
+  // 검색 버튼 클릭 시 (작성 중인 키워드들도 마저 넣기)
+  const handleSearchSubmit = () => {
+    let newIncs = [...includeTags];
+    let newExcs = [...excludeTags];
+    
+    if (includeInput.trim()) {
+      newIncs = Array.from(new Set([...newIncs, includeInput.trim()]));
+      setIncludeTags(newIncs);
+      setIncludeInput('');
+      localStorage.setItem('bridge_includes', JSON.stringify(newIncs));
+    }
+    
+    if (excludeInput.trim()) {
+      newExcs = Array.from(new Set([...newExcs, excludeInput.trim()]));
+      setExcludeTags(newExcs);
+      setExcludeInput('');
+      localStorage.setItem('bridge_excludes', JSON.stringify(newExcs));
+    }
+
+    applyFilter({ include: newIncs, exclude: newExcs });
   };
 
   return (
@@ -307,49 +399,77 @@ function FilterContent() {
       {/* 2행: 검색/키워드 */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">검색어 (직무, 회사 등)</label>
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+            <span>검색어 (직무, 회사 등)</span>
+            <span className="text-[10px] text-zinc-400 font-normal">엔터키로 추가</span>
+          </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-zinc-400" />
             </div>
             <input
               type="text"
-              value={include}
-              onChange={(e) => setInclude(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
+              value={includeInput}
+              onChange={(e) => setIncludeInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddInclude()}
               placeholder="예: 웹개발자, 카카오"
               className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all shadow-sm"
             />
           </div>
+          {includeTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {includeTags.map(tag => (
+                <span key={tag} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold rounded-lg pl-2 pr-1.5 py-1 border border-blue-100 dark:border-blue-800/50 shadow-sm transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50">
+                  {tag}
+                  <button type="button" onClick={() => handleRemoveInclude(tag)} className="hover:text-red-500 opacity-70 hover:opacity-100">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 flex gap-1 items-center">
-            제외 키워드
-            <span className="text-[10px] text-zinc-400">(쉼표 구분)</span>
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 flex justify-between items-center">
+            <span>제외 키워드</span>
+            <span className="text-[10px] text-zinc-400 font-normal">엔터키로 추가</span>
           </label>
           <input
             type="text"
-            value={exclude}
-            onChange={(e) => setExclude(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
+            value={excludeInput}
+            onChange={(e) => setExcludeInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddExclude()}
             placeholder="예: 배달, 뷰티"
             className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-red-400 focus:border-red-400 focus:outline-none transition-all shadow-sm"
           />
+          {excludeTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {excludeTags.map(tag => (
+                <span key={tag} className="flex items-center gap-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-[11px] font-bold rounded-lg pl-2 pr-1.5 py-1 border border-red-100 dark:border-red-800/50 shadow-sm transition-all hover:bg-red-100 dark:hover:bg-red-900/50">
+                  {tag}
+                  <button type="button" onClick={() => handleRemoveExclude(tag)} className="hover:text-red-500 opacity-70 hover:opacity-100">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-        <button
-          onClick={() => applyFilter()}
-          className="flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-700 dark:bg-white dark:hover:bg-zinc-200 dark:text-black text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all shadow-sm"
-        >
-          <Search className="w-4 h-4" />
-          검색
-        </button>
-        <button
-          onClick={resetAll}
-          className="flex items-center justify-center gap-1.5 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl px-4 py-2.5 text-sm transition-all shadow-sm"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          초기화
-        </button>
+        <div className="flex gap-2 h-[42px]">
+          <button
+            onClick={handleSearchSubmit}
+            className="flex-1 flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-700 dark:bg-white dark:hover:bg-zinc-200 dark:text-black text-white rounded-xl px-5 text-sm font-semibold transition-all shadow-sm"
+          >
+            <Search className="w-4 h-4" />
+            검색
+          </button>
+          <button
+            onClick={resetAll}
+            className="flex items-center justify-center gap-1.5 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl px-4 text-sm transition-all shadow-sm"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
